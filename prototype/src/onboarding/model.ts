@@ -23,6 +23,7 @@ export type PlanTemplate = {
   definitions: TemplateTask[];
 };
 export type Plan = {
+  week?: FirstWeek;
   employeeId: string;
   templateId: string;
   startedFor: string;
@@ -33,6 +34,7 @@ export type Plan = {
 };
 export type Option = { id: string; name: string };
 export type OnboardingData = {
+  contacts: { id: string; name: string; email: string | null }[];
   people: DirectoryPerson[];
   templates: PlanTemplate[];
   plans: Plan[];
@@ -52,6 +54,10 @@ export type OnboardingAction =
     }
   | { action: "start"; employeeId: string; templateId: string }
   | ({ action: "reschedule"; day: string; previousJoining: string } & Target)
+  | ({ action: "setup"; buddyId: string | null; setup: WeekSetup } & Target)
+  | ({ action: "acknowledge" } & Target)
+  | ({ action: "block"; note: string } & Target)
+  | ({ action: "resolve"; id: string; note: string } & Target)
   | ({ action: "complete"; index: number } & Target);
 export function shiftDay(day: string, offset: number) {
   const d = new Date(day + "T00:00:00Z");
@@ -104,6 +110,98 @@ export function revisePlan(
       ),
     };
   }
+  const week = plan.week ?? emptyWeek();
+  const next = { ...plan, revision: plan.revision + 1 };
+  if (cmd.action === "setup") {
+    if (!isHR(viewer) || cmd.buddyId === person.id)
+      throw new Error("HR must choose a buddy other than the new hire.");
+    const info = cmd.setup;
+    if (
+      (info.welcomeUrl && !safeResource(info.welcomeUrl)) ||
+      (info.policyUrl && !safeResource(info.policyUrl))
+    )
+      throw new Error("Use an HTTP or HTTPS resource link.");
+    if (
+      [info.policyTitle, info.policyVersion, info.policyUrl].some(Boolean) &&
+      ![info.policyTitle, info.policyVersion, info.policyUrl].every(Boolean)
+    )
+      throw new Error("Include the policy title, version and link together.");
+    return { ...next, buddyId: cmd.buddyId, week: { ...week, ...info } };
+  }
+  if (cmd.action === "acknowledge") {
+    if (
+      viewer.employeeId !== person.id ||
+      !week.policyUrl ||
+      acknowledged(week)
+    )
+      throw new Error(
+        "Only the new hire can acknowledge the current policy once.",
+      );
+    return {
+      ...next,
+      week: {
+        ...week,
+        acknowledgements: [
+          ...week.acknowledgements,
+          {
+            policyTitle: week.policyTitle,
+            policyVersion: week.policyVersion,
+            policyUrl: week.policyUrl,
+            at: now,
+            by: actor,
+          },
+        ],
+      },
+    };
+  }
+  if (cmd.action === "block") {
+    if (viewer.employeeId !== person.id || !cmd.note.trim())
+      throw new Error("Only the new hire can flag a blocker.");
+    return {
+      ...next,
+      week: {
+        ...week,
+        blockers: [
+          ...week.blockers,
+          {
+            id: String(next.revision),
+            note: cmd.note.trim(),
+            raised: now,
+            raisedBy: actor,
+            resolved: null,
+            resolvedBy: null,
+            resolution: null,
+          },
+        ],
+      },
+    };
+  }
+  if (cmd.action === "resolve") {
+    if (
+      !isHR(viewer) ||
+      !cmd.note.trim() ||
+      !week.blockers.some((b) => b.id === cmd.id && !b.resolved)
+    )
+      throw new Error(
+        "HR must select an open blocker and record its resolution.",
+      );
+    return {
+      ...next,
+      week: {
+        ...week,
+        blockers: week.blockers.map((b) =>
+          b.id === cmd.id
+            ? {
+                ...b,
+                resolved: now,
+                resolvedBy: actor,
+                resolution: cmd.note.trim(),
+              }
+            : b,
+        ),
+      },
+    };
+  }
   const task = plan.tasks[cmd.index];
   if (!task || task.done || !ownsTask(viewer, person, task))
     throw new Error("Only the assigned owner can complete an unfinished task.");
@@ -114,4 +212,61 @@ export function revisePlan(
       i === cmd.index ? { ...t, done: now, completedBy: actor } : t,
     ),
   };
+}
+
+export type WeekSetup = {
+  schedule: string;
+  welcomeUrl: string;
+  policyTitle: string;
+  policyVersion: string;
+  policyUrl: string;
+};
+export type Acknowledgement = {
+  policyTitle: string;
+  policyVersion: string;
+  policyUrl: string;
+  at: string;
+  by: string;
+};
+export type Blocker = {
+  id: string;
+  note: string;
+  raised: string;
+  raisedBy: string;
+  resolved: string | null;
+  resolvedBy: string | null;
+  resolution: string | null;
+};
+export type FirstWeek = WeekSetup & {
+  acknowledgements: Acknowledgement[];
+  blockers: Blocker[];
+};
+export const emptyWeek = (): FirstWeek => ({
+  schedule: "",
+  welcomeUrl: "",
+  policyTitle: "",
+  policyVersion: "",
+  policyUrl: "",
+  acknowledgements: [],
+  blockers: [],
+});
+export function acknowledged(w: FirstWeek) {
+  return w.acknowledgements.some(
+    (a) =>
+      a.policyTitle === w.policyTitle &&
+      a.policyVersion === w.policyVersion &&
+      a.policyUrl === w.policyUrl,
+  );
+}
+export function safeResource(url: string) {
+  try {
+    const parsed = new URL(url);
+    return (
+      ["https:", "http:"].includes(parsed.protocol) &&
+      !parsed.username &&
+      !parsed.password
+    );
+  } catch {
+    return false;
+  }
 }

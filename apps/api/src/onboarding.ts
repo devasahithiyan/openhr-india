@@ -20,6 +20,7 @@ import {
   matchesTemplate,
   onboardCommand,
   revisePlan,
+  type FirstWeek,
   type ChecklistTask,
   type OnboardingData,
   type Plan,
@@ -56,11 +57,13 @@ function presentPlan(p: {
   revision: number;
   closedAt: Date | null;
   tasks: Prisma.JsonValue;
+  week: Prisma.JsonValue;
 }): Plan {
   return {
     employeeId: p.employeeId,
     templateId: p.templateId,
     buddyId: p.buddyId,
+    week: (p.week as unknown as FirstWeek) ?? undefined,
     startedFor: p.startedFor,
     revision: p.revision,
     closedAt: p.closedAt?.toISOString() ?? null,
@@ -95,6 +98,10 @@ export class OnboardingRepository {
           }),
           this.db.onboardingPlan.findMany({
             where: { companyId, employee: visible },
+            include: {
+              buddy: { select: employeeSelect },
+              employee: { select: { manager: { select: employeeSelect } } },
+            },
           }),
           this.db.onboardingTemplate.findMany({
             where: {
@@ -121,6 +128,21 @@ export class OnboardingRepository {
         { isolationLevel: "RepeatableRead" },
       );
     return {
+      contacts: [
+        ...new Map(
+          plans
+            .flatMap((p) => [p.buddy, p.employee.manager])
+            .filter((p) => p !== null)
+            .map((p) => [
+              p.id,
+              {
+                id: p.id,
+                name: p.name,
+                email: p.membership?.user.email ?? null,
+              },
+            ]),
+        ).values(),
+      ],
       people: people.map(person),
       plans: plans.map(presentPlan),
       templates: templates.map((t) => ({
@@ -138,7 +160,12 @@ export class OnboardingRepository {
   async write(a: Actor, body: unknown) {
     const c = onboardCommand.parse(body),
       companyId = a.companyId;
-    if (["template", "start", "reschedule"].includes(c.action) && !isHR(a))
+    if (
+      ["template", "start", "reschedule", "setup", "resolve"].includes(
+        c.action,
+      ) &&
+      !isHR(a)
+    )
       throw new ForbiddenException("HR access required");
     return this.db.$transaction(
       async (tx) => {
@@ -210,6 +237,8 @@ export class OnboardingRepository {
             where: { ...key, revision: c.revision },
             data: {
               tasks: next.tasks,
+              buddyId: next.buddyId,
+              week: next.week,
               startedFor: next.startedFor,
               revision: next.revision,
             },

@@ -861,6 +861,60 @@ describe("real database Auth + People API", () => {
       "2026-04-07",
     ]);
     expect((await post(shift)).status).toBe(409);
+    const setup = {
+      action: "setup",
+      employeeId,
+      revision: 3,
+      buddyId: outsiderId,
+      setup: {
+        schedule: "09:30 team welcome",
+        welcomeUrl: "https://example.test/welcome",
+        policyTitle: "Handbook",
+        policyVersion: "1",
+        policyUrl: "https://example.test/v1",
+      },
+    };
+    await as(employee, setup).expect(403);
+    expect(
+      (
+        await post({
+          ...setup,
+          setup: { ...setup.setup, welcomeUrl: "javascript:alert(1)" },
+        })
+      ).status,
+    ).toBe(409);
+    expect((await post(setup)).status).toBe(201);
+    const own = await read(cookies(employee));
+    expect(own.contacts.map((c) => c.id).sort()).toEqual(
+      [outsiderId, managerId].sort(),
+    );
+    expect(own.people.map((p) => p.id)).toEqual([employeeId]);
+    await as(employee, {
+      action: "acknowledge",
+      employeeId,
+      revision: 4,
+    }).expect(201);
+    await as(employee, {
+      action: "block",
+      employeeId,
+      revision: 5,
+      note: "Missing laptop",
+    }).expect(201);
+    const week = (await getPlan()).week!;
+    expect(week.acknowledgements[0]).toMatchObject({
+      policyVersion: "1",
+      by: employeeMemberId,
+    });
+    const resolve = {
+      action: "resolve",
+      employeeId,
+      revision: 6,
+      id: week.blockers[0]!.id,
+      note: "Laptop ready",
+    };
+    await as(employee, resolve).expect(403);
+    expect((await post(resolve)).status).toBe(201);
+    expect((await getPlan()).week!.blockers[0]!.resolvedBy).toBe(adminMemberId);
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);

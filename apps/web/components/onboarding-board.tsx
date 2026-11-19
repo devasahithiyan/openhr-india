@@ -2,6 +2,8 @@
 import { useState, type FormEvent } from "react";
 import {
   isHR,
+  emptyWeek,
+  acknowledged,
   ownsTask,
   matchesTemplate,
   shiftDay,
@@ -227,6 +229,222 @@ function Reschedule({
     </details>
   );
 }
+function FirstWeekView({
+  data,
+  p,
+  plan,
+  viewer,
+  send,
+}: {
+  data: OnboardingData;
+  p: DirectoryPerson;
+  plan: Plan;
+  viewer: Viewer;
+  send: Send;
+}) {
+  const week = plan.week ?? emptyWeek(),
+    target = { employeeId: p.id, revision: plan.revision },
+    hr = isHR(viewer),
+    self = viewer.employeeId === p.id;
+  const contact = (id: string | null) => {
+    const c = data.contacts.find((c) => c.id === id);
+    return c ? (
+      <>
+        {c.name}
+        {c.email && (
+          <>
+            {" "}
+            ·{" "}
+            <a className="underline" href={"mailto:" + c.email}>
+              {c.email}
+            </a>
+          </>
+        )}
+      </>
+    ) : (
+      "Unassigned"
+    );
+  };
+  return (
+    <section className="space-y-2 border-t border-line pt-3">
+      <h3 className="font-bold">First week</h3>
+      <p>Reporting manager · {contact(p.managerId)}</p>
+      <p>Buddy · {contact(plan.buddyId)}</p>
+      {week.schedule && (
+        <p className="whitespace-pre-line">
+          <strong>First-day schedule</strong>
+          <br />
+          {week.schedule}
+        </p>
+      )}
+      {week.welcomeUrl && (
+        <p>
+          <a
+            className="underline"
+            href={week.welcomeUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Welcome materials
+          </a>
+        </p>
+      )}
+      {week.policyUrl && (
+        <div>
+          <a
+            className="underline"
+            href={week.policyUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {week.policyTitle} · {week.policyVersion}
+          </a>{" "}
+          {acknowledged(week) ? (
+            "Acknowledged"
+          ) : self && !plan.closedAt ? (
+            <button onClick={() => send({ action: "acknowledge", ...target })}>
+              Acknowledge policy
+            </button>
+          ) : (
+            "Awaiting acknowledgement"
+          )}
+        </div>
+      )}
+      {week.acknowledgements.length > 0 && (
+        <details>
+          <summary>Policy acknowledgement history</summary>
+          {week.acknowledgements.map((a, i) => (
+            <p key={i}>
+              {a.policyTitle} · {a.policyVersion} · {a.at.slice(0, 10)}
+            </p>
+          ))}
+        </details>
+      )}
+      {hr && !plan.closedAt && (
+        <details>
+          <summary>Edit first-week details</summary>
+          <form
+            key={plan.revision}
+            className="grid gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget),
+                get = (k: string) => String(f.get(k) ?? "").trim();
+              void send({
+                action: "setup",
+                ...target,
+                buddyId: get("buddy") || null,
+                setup: {
+                  schedule: get("schedule"),
+                  welcomeUrl: get("welcome"),
+                  policyTitle: get("policy"),
+                  policyVersion: get("version"),
+                  policyUrl: get("url"),
+                },
+              });
+            }}
+          >
+            <label>
+              Buddy
+              <select name="buddy" defaultValue={plan.buddyId ?? ""}>
+                <option value="">Unassigned</option>
+                {data.people
+                  .filter((e) => e.id !== p.id)
+                  .map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label>
+              First-day schedule
+              <textarea
+                name="schedule"
+                maxLength={1000}
+                defaultValue={week.schedule}
+              />
+            </label>
+            <label>
+              Welcome materials URL
+              <input type="url" name="welcome" defaultValue={week.welcomeUrl} />
+            </label>
+            <label>
+              Policy title
+              <input
+                name="policy"
+                maxLength={160}
+                defaultValue={week.policyTitle}
+              />
+            </label>
+            <label>
+              Policy version
+              <input
+                name="version"
+                maxLength={80}
+                defaultValue={week.policyVersion}
+              />
+            </label>
+            <label>
+              Policy URL
+              <input type="url" name="url" defaultValue={week.policyUrl} />
+            </label>
+            <button>Save first-week details</button>
+          </form>
+        </details>
+      )}
+      {week.blockers.map((b) => (
+        <div className="border-l-2 border-line pl-3" key={b.id}>
+          <strong>{b.resolved ? "Resolved blocker" : "Open blocker"}</strong> ·{" "}
+          {b.note}
+          {b.resolution && <p>{b.resolution}</p>}
+          {!b.resolved && hr && !plan.closedAt && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send({
+                  action: "resolve",
+                  ...target,
+                  id: b.id,
+                  note: String(new FormData(e.currentTarget).get("note")),
+                });
+              }}
+            >
+              <label>
+                Resolution
+                <input name="note" required maxLength={500} />
+              </label>
+              <button>Resolve blocker</button>
+            </form>
+          )}
+        </div>
+      ))}
+      {self && !plan.closedAt && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            if (
+              await send({
+                action: "block",
+                ...target,
+                note: String(new FormData(form).get("note")),
+              })
+            )
+              form.reset();
+          }}
+        >
+          <label>
+            What is blocking your onboarding?
+            <input name="note" required maxLength={500} />
+          </label>
+          <button>Flag blocker</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export function OnboardingBoard({
   data,
   viewer,
@@ -249,6 +467,27 @@ export function OnboardingBoard({
           <Templates data={data} send={send} />
           <Start data={data} send={send} initialEmployee={initialEmployee} />
         </>
+      )}
+      {viewer.role === "Manager" && (
+        <section className="panel">
+          <h2 className="font-bold">My manager tasks</h2>
+          {data.plans.flatMap((plan) =>
+            plan.tasks
+              .filter(
+                (t) =>
+                  !t.done &&
+                  t.owner === "Manager" &&
+                  data.people.find((p) => p.id === plan.employeeId)
+                    ?.managerId === viewer.employeeId,
+              )
+              .map((t, i) => (
+                <p key={plan.employeeId + i}>
+                  {data.people.find((p) => p.id === plan.employeeId)?.name} ·{" "}
+                  {t.title} · {t.due}
+                </p>
+              )),
+          )}
+        </section>
       )}
       {!data.plans.length && <p>No onboarding plans yet.</p>}
       {data.plans.map((plan) => {
@@ -287,6 +526,13 @@ export function OnboardingBoard({
                 </li>
               ))}
             </ul>
+            <FirstWeekView
+              data={data}
+              p={p}
+              plan={plan}
+              viewer={viewer}
+              send={send}
+            />
             {hr && !plan.closedAt && (
               <Reschedule plan={plan} p={p} send={send} />
             )}
