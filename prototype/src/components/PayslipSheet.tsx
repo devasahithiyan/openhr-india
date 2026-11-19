@@ -1,23 +1,51 @@
 import { COMPANY, type Employee } from "../lib/data";
 import { computePayslip, inWords, indian, rupees } from "../lib/payroll";
+import { PF_RULE, type PublishedSlip } from "../lib/payrollRun";
 import { fmtDate } from "./ui";
 
 const MONTHS = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-export function PayslipSheet({ employee, month, year }: { employee: Employee; month: number; year: number }) {
-  const p = computePayslip(employee, month);
+/**
+ * A payslip document. Pass `slip` for a published (frozen) statement from the payroll
+ * review; without it, older months are illustrated from the employee's standard pay.
+ */
+export function PayslipSheet({
+  employee,
+  month,
+  year,
+  slip,
+}: {
+  employee: Employee;
+  month: number;
+  year: number;
+  slip?: PublishedSlip;
+}) {
+  const est = computePayslip(employee, month);
   const daysInMonth = new Date(year, month, 0).getDate();
-  const earnings: [string, number][] = [
-    ["Basic", p.basic],
-    ["House rent allowance", p.hra],
-    ["Special allowance", p.special],
-  ];
-  const deductions: [string, number][] = [
-    ["Provident fund (employee)", p.pf],
-    ["ESI (employee)", p.esi],
-    ["Professional tax", p.pt],
-    ["Income tax (TDS)", p.tds],
-  ];
+  const earnings: [string, number][] = slip
+    ? slip.lines.map((l) => [l.name, l.earned])
+    : [
+        ["Basic", est.basic],
+        ["House rent allowance", est.hra],
+        ["Special allowance", est.special],
+      ];
+  const deductions: [string, number][] = slip
+    ? [
+        ["Provident fund (employee)", slip.pf],
+        ["ESI (employee)", slip.assessment.esi],
+        ["Professional tax", slip.assessment.pt],
+        ["Labour welfare fund", slip.assessment.lwf],
+        ["Income tax (TDS)", slip.assessment.tds],
+      ]
+    : [
+        ["Provident fund (employee)", est.pf],
+        ["ESI (employee)", est.esi],
+        ["Professional tax", est.pt],
+        ["Income tax (TDS)", est.tds],
+      ];
+  const p = slip
+    ? { gross: slip.gross, totalDeductions: slip.gross - slip.net, net: slip.net }
+    : est;
   const rows = Math.max(earnings.length, deductions.length);
 
   return (
@@ -46,7 +74,7 @@ export function PayslipSheet({ employee, month, year }: { employee: Employee; mo
             ["PAN", employee.panMasked],
             ["UAN", employee.uan],
             ["Bank account", `${employee.bank} ••${employee.accountLast4}`],
-            ["Paid days", `${daysInMonth} of ${daysInMonth}`],
+            ["Paid days", slip ? `${slip.payableDays} of ${slip.calendarDays}` : `${daysInMonth} of ${daysInMonth}`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-[13px] text-muted">{k}</dt>
@@ -93,10 +121,16 @@ export function PayslipSheet({ employee, month, year }: { employee: Employee; mo
         </div>
 
         <footer className="mt-5 flex flex-wrap justify-between gap-2 text-[13px] text-muted">
-          <p>
-            Employer contributions, not deducted from pay: PF {rupees(p.employerPf)}
-            {p.employerEsi ? `, ESI ${rupees(p.employerEsi)}` : ""}.
-          </p>
+          {slip ? (
+            <p>
+              Employee PF under {PF_RULE.version}. Other deductions from assessment {slip.assessment.reference}.
+            </p>
+          ) : (
+            <p>
+              Employer contributions, not deducted from pay: PF {rupees(est.employerPf)}
+              {est.employerEsi ? `, ESI ${rupees(est.employerEsi)}` : ""}.
+            </p>
+          )}
           <p>Tax regime: {employee.regime === "new" ? "New" : "Old"}. This is a computer-generated payslip.</p>
         </footer>
       </div>

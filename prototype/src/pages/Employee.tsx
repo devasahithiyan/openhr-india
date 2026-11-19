@@ -103,8 +103,9 @@ const SLIP_MONTHS = [
 
 export function EmployeePayslips() {
   const me = useMe();
-  const { payrollStage } = useDemo();
-  const months = payrollStage === "paid" ? [{ month: 11, year: 2026, label: "November 2026" }, ...SLIP_MONTHS] : SLIP_MONTHS;
+  const { published } = useDemo();
+  const novSlip = published?.slips.find((s) => s.employeeId === me.id);
+  const months = novSlip ? [{ month: 11, year: 2026, label: "November 2026" }, ...SLIP_MONTHS] : SLIP_MONTHS;
   const [idx, setIdx] = useState(0);
   const m = months[Math.min(idx, months.length - 1)];
   return (
@@ -113,9 +114,9 @@ export function EmployeePayslips() {
         <PageHeader
           title="Payslips"
           sub={
-            payrollStage === "paid"
-              ? "November's salary has been paid. Your new payslip is ready."
-              : "November's payslip appears once HR marks salaries as paid."
+            novSlip
+              ? "November's payroll is published. Your new payslip is ready."
+              : "November's payslip appears once HR reviews payroll and an Admin publishes it."
           }
           action={
             <div className="flex flex-wrap gap-2">
@@ -141,7 +142,7 @@ export function EmployeePayslips() {
           }
         />
       </div>
-      <PayslipSheet employee={me} month={m.month} year={m.year} />
+      <PayslipSheet employee={me} month={m.month} year={m.year} slip={m.month === 11 ? novSlip : undefined} />
     </>
   );
 }
