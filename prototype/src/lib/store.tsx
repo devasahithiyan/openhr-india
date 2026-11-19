@@ -2,9 +2,18 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import {
   DEMO_EMPLOYEE_ID,
   EMPLOYEES,
+  INITIAL_ATTENDANCE,
+  INITIAL_BRANCH_CALENDARS,
+  INITIAL_CORRECTIONS,
   INITIAL_FILINGS,
   INITIAL_LEAVES,
+  INITIAL_POLICIES,
+  type AttendanceEntry,
+  type BranchCalendar,
+  type Correction,
+  type CorrectionStatus,
   type Filing,
+  type LeavePolicy,
   type LeaveRequest,
   type LeaveStatus,
 } from "./data";
@@ -12,25 +21,41 @@ import type { Declarations, Regime } from "./payroll";
 
 export type PayrollStage = "review" | "calculated" | "approved" | "paid";
 
+export const DEMO_TODAY = "2026-11-19";
+
 interface DemoState {
   leaves: LeaveRequest[];
   filings: Filing[];
   payrollStage: PayrollStage;
   myRegime: Regime;
   myDeclarations: Declarations;
+  policies: LeavePolicy[];
+  calendars: Record<string, BranchCalendar>;
+  attendance: AttendanceEntry[];
+  corrections: Correction[];
 }
 
 interface DemoStore extends DemoState {
   applyLeave: (l: Omit<LeaveRequest, "id" | "status" | "appliedOn" | "employeeId">) => void;
+  withdrawLeave: (id: string) => void;
   setLeaveStatus: (id: string, status: LeaveStatus) => void;
   setPayrollStage: (s: PayrollStage) => void;
   markFiled: (id: string) => void;
   setMyTax: (regime: Regime, decl: Declarations) => void;
+  addPolicy: (p: Omit<LeavePolicy, "id">) => void;
+  setWorkweek: (branch: string, weekdays: number[]) => void;
+  addHoliday: (branch: string, day: string, name: string) => void;
+  removeHoliday: (branch: string, id: string) => void;
+  clock: (time: string) => void;
+  requestCorrection: (c: Omit<Correction, "id" | "status" | "appliedOn" | "employeeId">) => void;
+  setCorrectionStatus: (id: string, status: CorrectionStatus) => void;
   reset: () => void;
 }
 
-const KEY = "openhr-demo-v1";
+// v2 adds policies, branch calendars and attendance; older saved state is ignored.
+const KEY = "openhr-demo-v2";
 const me = EMPLOYEES.find((e) => e.id === DEMO_EMPLOYEE_ID)!;
+const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const initial = (): DemoState => ({
   leaves: INITIAL_LEAVES,
@@ -38,6 +63,10 @@ const initial = (): DemoState => ({
   payrollStage: "review",
   myRegime: me.regime,
   myDeclarations: me.declarations,
+  policies: INITIAL_POLICIES,
+  calendars: INITIAL_BRANCH_CALENDARS,
+  attendance: INITIAL_ATTENDANCE,
+  corrections: INITIAL_CORRECTIONS,
 });
 
 function load(): DemoState {
@@ -63,22 +92,62 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     }
   }, [state]);
 
+  const patchCalendar = (branch: string, fn: (c: BranchCalendar) => BranchCalendar) =>
+    setState((s) => ({ ...s, calendars: { ...s.calendars, [branch]: fn(s.calendars[branch]) } }));
+
   const store: DemoStore = {
     ...state,
     applyLeave: (l) =>
       setState((s) => ({
         ...s,
-        leaves: [
-          { ...l, id: `l${Date.now()}`, employeeId: DEMO_EMPLOYEE_ID, status: "Pending", appliedOn: "2026-11-19" },
-          ...s.leaves,
-        ],
+        leaves: [{ ...l, id: uid("l"), employeeId: DEMO_EMPLOYEE_ID, status: "Pending", appliedOn: DEMO_TODAY }, ...s.leaves],
       })),
+    withdrawLeave: (id) => setState((s) => ({ ...s, leaves: s.leaves.filter((l) => l.id !== id) })),
     setLeaveStatus: (id, status) =>
       setState((s) => ({ ...s, leaves: s.leaves.map((l) => (l.id === id ? { ...l, status } : l)) })),
     setPayrollStage: (payrollStage) => setState((s) => ({ ...s, payrollStage })),
     markFiled: (id) =>
       setState((s) => ({ ...s, filings: s.filings.map((f) => (f.id === id ? { ...f, status: "Filed" } : f)) })),
     setMyTax: (myRegime, myDeclarations) => setState((s) => ({ ...s, myRegime, myDeclarations })),
+    addPolicy: (p) => setState((s) => ({ ...s, policies: [...s.policies, { ...p, id: uid("p") }] })),
+    setWorkweek: (branch, weekdays) => patchCalendar(branch, (c) => ({ ...c, weekdays: [...weekdays].sort() })),
+    addHoliday: (branch, day, name) =>
+      patchCalendar(branch, (c) => ({
+        ...c,
+        holidays: [...c.holidays.filter((x) => x.day !== day), { id: uid("h"), day, name }].sort((a, b) =>
+          a.day.localeCompare(b.day),
+        ),
+      })),
+    removeHoliday: (branch, id) => patchCalendar(branch, (c) => ({ ...c, holidays: c.holidays.filter((x) => x.id !== id) })),
+    clock: (time) =>
+      setState((s) => {
+        const open = s.attendance.find((a) => a.employeeId === DEMO_EMPLOYEE_ID && a.day === DEMO_TODAY);
+        if (!open) return { ...s, attendance: [...s.attendance, { employeeId: DEMO_EMPLOYEE_ID, day: DEMO_TODAY, checkIn: time }] };
+        if (open.checkOut) return s;
+        return {
+          ...s,
+          attendance: s.attendance.map((a) => (a === open ? { ...a, checkOut: time < a.checkIn ? a.checkIn : time } : a)),
+        };
+      }),
+    requestCorrection: (c) =>
+      setState((s) => ({
+        ...s,
+        corrections: [{ ...c, id: uid("c"), employeeId: DEMO_EMPLOYEE_ID, status: "Pending", appliedOn: DEMO_TODAY }, ...s.corrections],
+      })),
+    setCorrectionStatus: (id, status) =>
+      setState((s) => {
+        const c = s.corrections.find((x) => x.id === id);
+        if (!c) return s;
+        // An approved correction replaces that day's punches in the register.
+        const attendance =
+          status === "Approved"
+            ? [
+                ...s.attendance.filter((a) => !(a.employeeId === c.employeeId && a.day === c.day)),
+                { employeeId: c.employeeId, day: c.day, checkIn: c.checkIn, checkOut: c.checkOut },
+              ]
+            : s.attendance;
+        return { ...s, attendance, corrections: s.corrections.map((x) => (x.id === id ? { ...x, status } : x)) };
+      }),
     reset: () => setState(initial()),
   };
 

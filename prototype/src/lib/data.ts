@@ -66,7 +66,8 @@ export const EMPLOYEES: Employee[] = [
 /** The employee the "employee view" logs in as. */
 export const DEMO_EMPLOYEE_ID = "e3";
 
-export type LeaveType = "Casual" | "Sick" | "Earned";
+/** A leave policy name such as "Casual". HR can add more policies in the demo. */
+export type LeaveType = string;
 export type LeaveStatus = "Pending" | "Approved" | "Rejected";
 
 export interface LeaveRequest {
@@ -87,23 +88,124 @@ export const INITIAL_LEAVES: LeaveRequest[] = [
   { id: "l3", employeeId: "e12", type: "Earned", from: "2026-12-21", to: "2026-12-31", days: 9, reason: "Year-end trip home to Kozhikode", status: "Pending", appliedOn: "2026-11-12" },
   { id: "l4", employeeId: "e13", type: "Casual", from: "2026-11-19", to: "2026-11-19", days: 1, reason: "Passport appointment", status: "Approved", appliedOn: "2026-11-10" },
   { id: "l5", employeeId: "e3", type: "Earned", from: "2026-10-19", to: "2026-10-23", days: 5, reason: "Deepavali at home in Madurai", status: "Approved", appliedOn: "2026-09-28" },
+  { id: "l6", employeeId: "e8", type: "Earned", from: "2026-11-09", to: "2026-11-11", days: 3, reason: "Bhau-beej with family in Kolhapur", status: "Approved", appliedOn: "2026-10-26" },
+  { id: "l7", employeeId: "e5", type: "Sick", from: "2026-11-05", to: "2026-11-06", days: 2, reason: "Dental surgery", status: "Approved", appliedOn: "2026-11-04" },
 ];
 
-export const LEAVE_ENTITLEMENT: Record<LeaveType, number> = { Casual: 12, Sick: 12, Earned: 18 };
-
-export interface Holiday {
-  date: string;
-  name: string;
-  states: IndianState[] | "All";
+export interface LeavePolicy {
+  id: string;
+  name: LeaveType;
+  year: number;
+  openingDays: number;
 }
 
-export const HOLIDAYS: Holiday[] = [
-  { date: "2026-12-25", name: "Christmas", states: "All" },
-  { date: "2027-01-01", name: "New Year's Day", states: "All" },
-  { date: "2027-01-15", name: "Thai Pongal", states: ["Tamil Nadu"] },
-  { date: "2027-01-15", name: "Makar Sankranti", states: ["Karnataka", "Maharashtra"] },
-  { date: "2027-01-16", name: "Thiruvalluvar Day", states: ["Tamil Nadu"] },
-  { date: "2027-01-26", name: "Republic Day", states: "All" },
+export const INITIAL_POLICIES: LeavePolicy[] = [
+  { id: "p1", name: "Casual", year: 2026, openingDays: 12 },
+  { id: "p2", name: "Sick", year: 2026, openingDays: 12 },
+  { id: "p3", name: "Earned", year: 2026, openingDays: 18 },
+];
+
+export interface Holiday {
+  id: string;
+  day: string;
+  name: string;
+}
+
+export interface BranchCalendar {
+  /** Working days, 0 = Sunday ... 6 = Saturday. */
+  weekdays: number[];
+  holidays: Holiday[];
+}
+
+const h = (id: string, day: string, name: string): Holiday => ({ id, day, name });
+
+export const INITIAL_BRANCH_CALENDARS: Record<string, BranchCalendar> = {
+  Coimbatore: {
+    weekdays: [1, 2, 3, 4, 5, 6],
+    holidays: [
+      h("h1", "2026-12-25", "Christmas"),
+      h("h2", "2027-01-01", "New Year's Day"),
+      h("h3", "2027-01-15", "Thai Pongal"),
+      h("h4", "2027-01-16", "Thiruvalluvar Day"),
+      h("h5", "2027-01-26", "Republic Day"),
+    ],
+  },
+  Bengaluru: {
+    weekdays: [1, 2, 3, 4, 5],
+    holidays: [
+      h("h6", "2026-11-01", "Kannada Rajyotsava"),
+      h("h7", "2026-12-25", "Christmas"),
+      h("h8", "2027-01-01", "New Year's Day"),
+      h("h9", "2027-01-15", "Makar Sankranti"),
+      h("h10", "2027-01-26", "Republic Day"),
+    ],
+  },
+  Pune: {
+    weekdays: [1, 2, 3, 4, 5, 6],
+    holidays: [
+      h("h11", "2026-11-24", "Guru Nanak Jayanti"),
+      h("h12", "2026-12-25", "Christmas"),
+      h("h13", "2027-01-01", "New Year's Day"),
+      h("h14", "2027-01-15", "Makar Sankranti"),
+      h("h15", "2027-01-26", "Republic Day"),
+    ],
+  },
+};
+
+export interface AttendanceEntry {
+  employeeId: string;
+  day: string;
+  checkIn: string; // "HH:MM" IST
+  checkOut?: string;
+}
+
+export type CorrectionStatus = "Pending" | "Approved" | "Rejected";
+
+export interface Correction {
+  id: string;
+  employeeId: string;
+  day: string;
+  checkIn: string;
+  checkOut: string;
+  reason: string;
+  status: CorrectionStatus;
+  appliedOn: string;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Plausible punches for 16–19 Nov 2026. Deterministic so every visitor sees the same register. */
+function seedAttendance(): AttendanceEntry[] {
+  const days = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19"];
+  const out: AttendanceEntry[] = [];
+  EMPLOYEES.forEach((e, i) => {
+    days.forEach((day, j) => {
+      const isToday = day === "2026-11-19";
+      if (e.id === "e3" && isToday) return; // Priya checks in herself in the demo
+      if (e.id === "e13" && isToday) return; // Ananya is on approved leave
+      if (e.id === "e6" && (day === "2026-11-18" || isToday)) return; // Ganesh is off sick
+      if (e.id === "e4" && day === "2026-11-17") {
+        out.push({ employeeId: e.id, day, checkIn: "08:52" }); // forgot to punch out
+        return;
+      }
+      const inMin = 8 * 60 + 40 + ((i * 7 + j * 11) % 45);
+      const outMin = inMin + 9 * 60 + ((i * 5 + j * 3) % 40);
+      out.push({
+        employeeId: e.id,
+        day,
+        checkIn: `${pad(Math.floor(inMin / 60))}:${pad(inMin % 60)}`,
+        checkOut: isToday ? undefined : `${pad(Math.floor(outMin / 60))}:${pad(outMin % 60)}`,
+      });
+    });
+  });
+  return out;
+}
+
+export const INITIAL_ATTENDANCE = seedAttendance();
+
+export const INITIAL_CORRECTIONS: Correction[] = [
+  { id: "c1", employeeId: "e4", day: "2026-11-17", checkIn: "08:52", checkOut: "18:10", reason: "Forgot to punch out after the evening shift handover", status: "Pending", appliedOn: "2026-11-18" },
+  { id: "c2", employeeId: "e9", day: "2026-11-16", checkIn: "09:30", checkOut: "18:45", reason: "Client visit in Hinjewadi, punched in late from the phone", status: "Approved", appliedOn: "2026-11-17" },
 ];
 
 export interface Filing {

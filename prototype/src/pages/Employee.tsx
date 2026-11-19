@@ -2,29 +2,36 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PayslipSheet } from "../components/PayslipSheet";
 import { Button, PageHeader, Pill, Section, fmtDate, fmtDay, fmtShort, statusTone } from "../components/ui";
-import { COMPANY, HOLIDAYS, LEAVE_ENTITLEMENT, type LeaveType } from "../lib/data";
+import { COMPANY, type LeaveType } from "../lib/data";
 import { annualTax, computePayslip, rupees, type Regime } from "../lib/payroll";
-import { useDemo, useMe } from "../lib/store";
+import { DEMO_TODAY, useDemo, useMe } from "../lib/store";
+import { chargeableDays } from "../lib/time";
 
+/** Balances for this year's leave policies, as configured by HR. */
 function useMyLeave() {
-  const { leaves } = useDemo();
+  const { leaves, policies } = useDemo();
   const me = useMe();
   const mine = leaves.filter((l) => l.employeeId === me.id);
-  const balance = (Object.keys(LEAVE_ENTITLEMENT) as LeaveType[]).map((t) => {
-    const used = mine.filter((l) => l.type === t && l.status === "Approved").reduce((s, l) => s + l.days, 0);
-    const pending = mine.filter((l) => l.type === t && l.status === "Pending").reduce((s, l) => s + l.days, 0);
-    return { type: t, total: LEAVE_ENTITLEMENT[t], used, pending, left: LEAVE_ENTITLEMENT[t] - used - pending };
-  });
+  const balance = policies
+    .filter((p) => p.year === 2026)
+    .map((p) => {
+      const used = mine.filter((l) => l.type === p.name && l.status === "Approved").reduce((s, l) => s + l.days, 0);
+      const pending = mine.filter((l) => l.type === p.name && l.status === "Pending").reduce((s, l) => s + l.days, 0);
+      return { type: p.name, total: p.openingDays, used, pending, left: p.openingDays - used - pending };
+    });
   return { mine, balance };
 }
 
-function myHolidays(state: string) {
-  return HOLIDAYS.filter((h) => h.states === "All" || h.states.includes(state as never));
+function useMyHolidays() {
+  const { calendars } = useDemo();
+  const me = useMe();
+  return calendars[me.branch].holidays.filter((h) => h.day >= DEMO_TODAY);
 }
 
 export function EmployeeHome() {
   const me = useMe();
   const { mine, balance } = useMyLeave();
+  const holidays = useMyHolidays();
   const last = computePayslip(me, 10);
   const latest = mine[0];
 
@@ -71,13 +78,14 @@ export function EmployeeHome() {
           </Section>
         </div>
 
-        <Section title={`Holidays in ${me.state}`}>
+        <Section title={`Holidays at ${me.branch}`}>
           <ul className="divide-y divide-line rounded-xl bg-white ring-1 ring-line">
-            {myHolidays(me.state).map((h) => (
-              <li key={h.date + h.name} className="flex items-center gap-4 px-5 py-3">
-                <span className="num w-16 text-[15px] font-semibold">{fmtShort(h.date)}</span>
+            {holidays.length === 0 && <li className="px-5 py-3 text-muted">No upcoming holidays.</li>}
+            {holidays.map((h) => (
+              <li key={h.id} className="flex items-center gap-4 px-5 py-3">
+                <span className="num w-16 text-[15px] font-semibold">{fmtShort(h.day)}</span>
                 <span className="flex-1">{h.name}</span>
-                <span className="text-[14px] text-muted">{fmtDay(h.date)}</span>
+                <span className="text-[14px] text-muted">{fmtDay(h.day)}</span>
               </li>
             ))}
           </ul>
@@ -138,30 +146,30 @@ export function EmployeePayslips() {
   );
 }
 
-function workingDays(from: string, to: string) {
-  let n = 0;
-  const d = new Date(from + "T00:00:00");
-  const end = new Date(to + "T00:00:00");
-  while (d <= end) {
-    if (d.getDay() !== 0) n++;
-    d.setDate(d.getDate() + 1);
-  }
-  return n;
-}
-
 export function EmployeeLeave() {
-  const { applyLeave } = useDemo();
+  const { applyLeave, withdrawLeave, calendars } = useDemo();
+  const me = useMe();
   const { mine, balance } = useMyLeave();
   const [type, setType] = useState<LeaveType>("Casual");
-  const [from, setFrom] = useState("2026-12-02");
-  const [to, setTo] = useState("2026-12-03");
+  const [from, setFrom] = useState("2026-12-24");
+  const [to, setTo] = useState("2026-12-28");
   const [reason, setReason] = useState("");
   const [sent, setSent] = useState(false);
 
-  const days = from && to && to >= from ? workingDays(from, to) : 0;
-  const left = balance.find((b) => b.type === type)!.left;
+  const cal = calendars[me.branch];
+  const days = chargeableDays(from, to, cal).length;
+  const left = balance.find((b) => b.type === type)?.left ?? 0;
+  const workweek = cal.weekdays.length === 6 ? "Sundays" : cal.weekdays.length === 5 ? "weekends" : "weekly offs";
   const error =
-    !from || !to ? "Pick both dates." : to < from ? "The end date is before the start date." : days > left ? `You have ${left} ${type.toLowerCase()} days left.` : "";
+    !from || !to
+      ? "Pick both dates."
+      : to < from
+        ? "The end date is before the start date."
+        : days === 0
+          ? "Those dates are all holidays or weekly offs."
+          : days > left
+            ? `You have ${left} ${type.toLowerCase()} days left.`
+            : "";
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -173,7 +181,10 @@ export function EmployeeLeave() {
 
   return (
     <>
-      <PageHeader title="Leave" sub="Requests go to your manager and HR. Sundays aren't counted." />
+      <PageHeader
+        title="Leave"
+        sub={`Requests go to your manager and HR. ${me.branch} holidays and ${workweek} aren't counted.`}
+      />
       <div className="grid gap-x-10 lg:grid-cols-[1fr_1.1fr]">
         <Section title="Apply for leave">
           <form onSubmit={submit} className="space-y-4 rounded-xl bg-white p-5 ring-1 ring-line">
@@ -232,7 +243,7 @@ export function EmployeeLeave() {
             </label>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className={`text-[15px] ${error ? "text-sindoor" : "text-muted"}`} role="status">
-                {error || `${days} working ${days === 1 ? "day" : "days"}`}
+                {error || `${days} chargeable working ${days === 1 ? "day" : "days"}`}
               </p>
               <Button type="submit" disabled={!!error || !reason.trim()}>
                 Send request
@@ -262,7 +273,14 @@ export function EmployeeLeave() {
                       {l.from !== l.to && ` to ${fmtDate(l.to)}`}. {l.reason}
                     </p>
                   </div>
-                  <Pill tone={statusTone(l.status)}>{l.status}</Pill>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <Pill tone={statusTone(l.status)}>{l.status}</Pill>
+                    {l.status === "Pending" && (
+                      <button className="text-[14px] font-semibold text-sindoor hover:underline" onClick={() => withdrawLeave(l.id)}>
+                        Withdraw
+                      </button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

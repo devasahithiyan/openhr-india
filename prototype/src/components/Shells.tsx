@@ -17,14 +17,17 @@ export function Logo({ light = false }: { light?: boolean }) {
 }
 
 export function AdminShell() {
-  const { leaves } = useDemo();
+  const { leaves, corrections } = useDemo();
   const pending = leaves.filter((l) => l.status === "Pending").length;
+  const pendingCorrections = corrections.filter((c) => c.status === "Pending").length;
   const [open, setOpen] = useState(false);
   const nav = [
     { to: "/admin", label: "Overview", end: true },
     { to: "/admin/people", label: "People" },
     { to: "/admin/org", label: "Org chart" },
     { to: "/admin/leave", label: "Leave requests", badge: pending },
+    { to: "/admin/calendar", label: "Team calendar" },
+    { to: "/admin/attendance", label: "Attendance", badge: pendingCorrections },
     { to: "/admin/payroll", label: "Payroll" },
     { to: "/admin/compliance", label: "Compliance" },
   ];
@@ -97,6 +100,7 @@ export function EmployeeShell() {
     { to: "/me", label: "Home", end: true },
     { to: "/me/payslips", label: "Payslips" },
     { to: "/me/leave", label: "Leave" },
+    { to: "/me/attendance", label: "Attendance" },
     { to: "/me/tax", label: "Tax" },
     { to: "/me/profile", label: "Profile" },
   ];

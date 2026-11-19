@@ -4,6 +4,8 @@ import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-do
 import "./index.css";
 import { AdminShell, EmployeeShell } from "./components/Shells";
 import { DemoProvider } from "./lib/store";
+import { AdminAttendance } from "./pages/AdminAttendance";
+import { AdminCalendar } from "./pages/AdminCalendar";
 import { AdminCompliance } from "./pages/AdminCompliance";
 import { AdminLeave } from "./pages/AdminLeave";
 import { AdminOrg } from "./pages/AdminOrg";
@@ -11,6 +13,7 @@ import { AdminOverview } from "./pages/AdminOverview";
 import { AdminPayroll } from "./pages/AdminPayroll";
 import { AdminPeople } from "./pages/AdminPeople";
 import { EmployeeHome, EmployeeLeave, EmployeePayslips, EmployeeProfile, EmployeeTax } from "./pages/Employee";
+import { EmployeeAttendance } from "./pages/EmployeeAttendance";
 import { Landing } from "./pages/Landing";
 
 function ScrollToTop() {
@@ -45,6 +48,8 @@ createRoot(document.getElementById("root")!).render(
             <Route path="people" element={<AdminPeople />} />
             <Route path="org" element={<AdminOrg />} />
             <Route path="leave" element={<AdminLeave />} />
+            <Route path="calendar" element={<AdminCalendar />} />
+            <Route path="attendance" element={<AdminAttendance />} />
             <Route path="payroll" element={<AdminPayroll />} />
             <Route path="compliance" element={<AdminCompliance />} />
           </Route>
@@ -52,6 +57,7 @@ createRoot(document.getElementById("root")!).render(
             <Route index element={<EmployeeHome />} />
             <Route path="payslips" element={<EmployeePayslips />} />
             <Route path="leave" element={<EmployeeLeave />} />
+            <Route path="attendance" element={<EmployeeAttendance />} />
             <Route path="tax" element={<EmployeeTax />} />
             <Route path="profile" element={<EmployeeProfile />} />
           </Route>
