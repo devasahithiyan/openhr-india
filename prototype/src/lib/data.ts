@@ -60,7 +60,7 @@ export const EMPLOYEES: Employee[] = [
   { id: "e11", code: "KT050", name: "Divya Hegde", designation: "E-commerce Lead", department: "Digital", branch: "Bengaluru", state: "Karnataka", joined: "2022-03-14", monthlyGross: 148000, panMasked: "XXXXX2219H", aadhaarLast4: "5093", uan: "1013XXXX1105", bank: "ICICI Bank", accountLast4: "7781", ifsc: "ICIC0000789", regime: "new", declarations: d(150000, 25000), managerId: "e2", email: "divya@kaveri.example" },
   { id: "e12", code: "KT051", name: "Mohammed Irfan", designation: "Full-stack Developer", department: "Digital", branch: "Bengaluru", state: "Karnataka", joined: "2023-09-01", monthlyGross: 112000, panMasked: "XXXXX6634I", aadhaarLast4: "2846", uan: "1014XXXX8834", bank: "Kotak Mahindra Bank", accountLast4: "5502", ifsc: "KKBK0000555", regime: "new", declarations: d(60000, 12000), managerId: "e11", email: "irfan@kaveri.example" },
   { id: "e13", code: "KT052", name: "Ananya Rao", designation: "Content Designer", department: "Digital", branch: "Bengaluru", state: "Karnataka", joined: "2024-07-08", monthlyGross: 64000, panMasked: "XXXXX9920A", aadhaarLast4: "6619", uan: "1015XXXX6670", bank: "Canara Bank", accountLast4: "2290", ifsc: "CNRB0000999", regime: "new", declarations: d(), managerId: "e11", email: "ananya@kaveri.example" },
-  { id: "e14", code: "KT053", name: "Vikram Gowda", designation: "Customer Support Associate", department: "Digital", branch: "Bengaluru", state: "Karnataka", joined: "2025-10-13", monthlyGross: 21000, panMasked: "XXXXX1043V", aadhaarLast4: "3725", uan: "1017XXXX0019", bank: "State Bank of India", accountLast4: "6604", ifsc: "SBIN0040123", regime: "new", declarations: d(), managerId: "e11", email: "vikram@kaveri.example" },
+  { id: "e14", code: "KT053", name: "Vikram Gowda", designation: "Customer Support Associate", department: "Digital", branch: "Bengaluru", state: "Karnataka", joined: "2026-11-09", monthlyGross: 21000, panMasked: "XXXXX1043V", aadhaarLast4: "3725", uan: "1017XXXX0019", bank: "State Bank of India", accountLast4: "6604", ifsc: "SBIN0040123", regime: "new", declarations: d(), managerId: "e11", email: "vikram@kaveri.example" },
 ];
 
 /** The employee the "employee view" logs in as. */
@@ -89,6 +89,7 @@ export const INITIAL_LEAVES: LeaveRequest[] = [
   { id: "l4", employeeId: "e13", type: "Casual", from: "2026-11-19", to: "2026-11-19", days: 1, reason: "Passport appointment", status: "Approved", appliedOn: "2026-11-10" },
   { id: "l5", employeeId: "e3", type: "Earned", from: "2026-10-19", to: "2026-10-23", days: 5, reason: "Deepavali at home in Madurai", status: "Approved", appliedOn: "2026-09-28" },
   { id: "l6", employeeId: "e8", type: "Earned", from: "2026-11-09", to: "2026-11-11", days: 3, reason: "Bhau-beej with family in Kolhapur", status: "Approved", appliedOn: "2026-10-26" },
+  { id: "l8", employeeId: "e10", type: "Loss of pay", from: "2026-11-12", to: "2026-11-12", days: 1, reason: "Extra day for a family function in Satara", status: "Approved", appliedOn: "2026-11-10" },
   { id: "l7", employeeId: "e5", type: "Sick", from: "2026-11-05", to: "2026-11-06", days: 2, reason: "Dental surgery", status: "Approved", appliedOn: "2026-11-04" },
 ];
 
@@ -97,12 +98,15 @@ export interface LeavePolicy {
   name: LeaveType;
   year: number;
   openingDays: number;
+  /** Unpaid leave reduces pay (loss of pay). Paid by default. */
+  unpaid?: boolean;
 }
 
 export const INITIAL_POLICIES: LeavePolicy[] = [
   { id: "p1", name: "Casual", year: 2026, openingDays: 12 },
   { id: "p2", name: "Sick", year: 2026, openingDays: 12 },
   { id: "p3", name: "Earned", year: 2026, openingDays: 18 },
+  { id: "p4", name: "Loss of pay", year: 2026, openingDays: 30, unpaid: true },
 ];
 
 export interface Holiday {

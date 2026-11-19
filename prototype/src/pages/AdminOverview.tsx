@@ -8,7 +8,7 @@ const todayIso = "2026-11-19";
 export const empById = (id: string) => EMPLOYEES.find((e) => e.id === id)!;
 
 export function AdminOverview() {
-  const { leaves, filings, payrollStage, setLeaveStatus } = useDemo();
+  const { leaves, filings, published, setLeaveStatus } = useDemo();
   const slips = EMPLOYEES.map((e) => computePayslip(e, PAYROLL_MONTH.month));
   const gross = slips.reduce((s, p) => s + p.gross, 0);
   const employerCost = slips.reduce((s, p) => s + p.employerPf + p.employerEsi, 0);
@@ -31,7 +31,7 @@ export function AdminOverview() {
         sub={dateLabel}
         action={
           <Link to="/admin/payroll">
-            <Button>{payrollStage === "paid" ? "View November payroll" : "Continue November payroll"}</Button>
+            <Button>{published ? "View November payroll" : "Review November payroll"}</Button>
           </Link>
         }
       />

@@ -19,8 +19,8 @@ import {
   type LeaveStatus,
 } from "./data";
 import type { Declarations, Regime } from "./payroll";
+import type { Assessment, PublishedRun, SalaryComponent } from "./payrollRun";
 
-export type PayrollStage = "review" | "calculated" | "approved" | "paid";
 
 export const DEMO_TODAY = "2026-11-19";
 
@@ -28,7 +28,11 @@ interface DemoState {
   claims: Claim[];
   leaves: LeaveRequest[];
   filings: Filing[];
-  payrollStage: PayrollStage;
+  /** Per-employee salary structures HR has edited; others use the defaults. */
+  salaries: Record<string, SalaryComponent[]>;
+  /** HR's deduction review per employee, tied to the inputs it was made against. */
+  reviews: Record<string, Assessment & { hash: string }>;
+  published: PublishedRun | null;
   myRegime: Regime;
   myDeclarations: Declarations;
   policies: LeavePolicy[];
@@ -42,7 +46,10 @@ interface DemoStore extends DemoState {
   applyLeave: (l: Omit<LeaveRequest, "id" | "status" | "appliedOn" | "employeeId">) => void;
   withdrawLeave: (id: string) => void;
   setLeaveStatus: (id: string, status: LeaveStatus) => void;
-  setPayrollStage: (s: PayrollStage) => void;
+  setSalary: (employeeId: string, components: SalaryComponent[]) => void;
+  saveReview: (employeeId: string, review: Assessment & { hash: string }) => void;
+  publishPayroll: (run: PublishedRun) => void;
+  reopenPayroll: () => void;
   markFiled: (id: string) => void;
   setMyTax: (regime: Regime, decl: Declarations) => void;
   addPolicy: (p: Omit<LeavePolicy, "id">) => void;
@@ -55,8 +62,8 @@ interface DemoStore extends DemoState {
   reset: () => void;
 }
 
-// v2 adds policies, branch calendars and attendance; older saved state is ignored.
-const KEY = "openhr-demo-v2";
+// v3 replaces the payroll stages with review-and-publish; older saved state is ignored.
+const KEY = "openhr-demo-v3";
 const me = EMPLOYEES.find((e) => e.id === DEMO_EMPLOYEE_ID)!;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -64,7 +71,9 @@ const initial = (): DemoState => ({
   claims: initialClaims,
   leaves: INITIAL_LEAVES,
   filings: INITIAL_FILINGS,
-  payrollStage: "review",
+  salaries: {},
+  reviews: {},
+  published: null,
   myRegime: me.regime,
   myDeclarations: me.declarations,
   policies: INITIAL_POLICIES,
@@ -113,7 +122,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     withdrawLeave: (id) => setState((s) => ({ ...s, leaves: s.leaves.filter((l) => l.id !== id) })),
     setLeaveStatus: (id, status) =>
       setState((s) => ({ ...s, leaves: s.leaves.map((l) => (l.id === id ? { ...l, status } : l)) })),
-    setPayrollStage: (payrollStage) => setState((s) => ({ ...s, payrollStage })),
+    setSalary: (id, components) => setState((s) => ({ ...s, salaries: { ...s.salaries, [id]: components } })),
+    saveReview: (id, review) => setState((s) => ({ ...s, reviews: { ...s.reviews, [id]: review } })),
+    publishPayroll: (published) => setState((s) => ({ ...s, published })),
+    reopenPayroll: () => setState((s) => ({ ...s, published: null, reviews: {} })),
     markFiled: (id) =>
       setState((s) => ({ ...s, filings: s.filings.map((f) => (f.id === id ? { ...f, status: "Filed" } : f)) })),
     setMyTax: (myRegime, myDeclarations) => setState((s) => ({ ...s, myRegime, myDeclarations })),
