@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: openhr
+      POSTGRES_PASSWORD: openhr_dev_only
+      POSTGRES_DB: openhr
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openhr -d openhr"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://openhr:openhr_dev_only@db:5432/openhr?schema=public
+    command: pnpm db:migrate
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://openhr:openhr_dev_only@db:5432/openhr?schema=public
+      PORT: 3001
+    command: pnpm --filter @openhr/api start
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  web:
+    build: .
+    env_file: .env
+    environment:
+      API_INTERNAL_URL: http://api:3001
+      PORT: 3000
+      NODE_ENV: production
+    command: pnpm --filter @openhr/web start
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - api
+volumes:
+  postgres_data:

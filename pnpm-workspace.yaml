@@ -1,0 +1,4 @@
+packages:
+  - apps/*
+  - packages/*
+# prototype intentionally remains a standalone project for its Vercel deployment.
