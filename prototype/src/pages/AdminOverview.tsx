@@ -73,7 +73,7 @@ export function AdminOverview() {
                         {l.from !== l.to && ` to ${fmtShort(l.to)}`}
                       </p>
                     </div>
-                    <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
+                    <div className="flex w-full gap-2 xl:w-auto [&>button]:flex-1 xl:[&>button]:flex-none">
                       <Button variant="danger" onClick={() => setLeaveStatus(l.id, "Rejected")}>
                         Reject
                       </Button>

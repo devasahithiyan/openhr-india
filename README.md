@@ -6,6 +6,15 @@ OpenHR India aims to give startups, SMEs and growing teams a free, self-hostable
 
 > 🚧 **Status: early stage.** The project is just getting started. Ideas, issues and contributions are very welcome.
 
+### 👀 Try the demo: [openhr-india.vercel.app](https://openhr-india.vercel.app)
+
+A clickable prototype with sample data showing both sides of the platform:
+
+- **HR admin view:** run monthly payroll (PF, ESI, PT, TDS), approve leave, track statutory filings.
+- **Employee view:** view payslips, apply for leave, compare old vs new tax regimes.
+
+The demo is front-end only (no backend yet) and lives in [`prototype/`](prototype/). Tax and statutory figures are illustrative.
+
 ## Why
 
 Most open-source HR tools are designed for the US or Europe. Indian companies need things those tools don't handle well:
