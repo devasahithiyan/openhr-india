@@ -342,6 +342,7 @@ model OnboardingTemplate {
  @@unique([companyId,name])
 }
 model OnboardingPlan {
+ readiness Json?
  week Json?
  companyId String @map("company_id") @db.Uuid
  employeeId String @db.Uuid
