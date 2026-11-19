@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "pnpm --filter @openhr/shared build && pnpm --parallel --filter @openhr/api --filter @openhr/web dev",
     "build": "pnpm --filter @openhr/shared build && pnpm --filter @openhr/api build && pnpm --filter @openhr/web build",
-    "lint": "eslint apps packages scripts tests *.ts && prettier --check apps packages scripts tests *.ts package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.check.json eslint.config.mjs compose.yaml .github/workflows/ci.yml",
+    "lint": "node scripts/sync-onboarding.mjs --check && eslint apps packages scripts tests *.ts && prettier --check apps packages scripts tests *.ts package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.check.json eslint.config.mjs compose.yaml .github/workflows/ci.yml",
     "format": "prettier --write apps packages scripts tests *.ts package.json pnpm-workspace.yaml tsconfig.base.json tsconfig.check.json eslint.config.mjs compose.yaml .github/workflows/ci.yml",
     "typecheck": "pnpm --filter @openhr/shared build && pnpm -r --filter \"@openhr/*\" typecheck && tsc -p tsconfig.check.json",
     "test": "pnpm --filter @openhr/shared build && vitest run",

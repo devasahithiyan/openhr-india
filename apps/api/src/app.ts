@@ -16,6 +16,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { Database } from "./db";
 import { PayrollController, PayrollRepository } from "./payroll";
+import { OnboardingController, OnboardingRepository } from "./onboarding";
 import { ExpenseController, ExpenseRepository } from "./expenses";
 import { TimeController } from "./time";
 import { AuthController, SessionGuard } from "./auth";
@@ -72,6 +73,7 @@ class SafeErrors implements ExceptionFilter {
 }
 @Module({
   controllers: [
+    OnboardingController,
     ExpenseController,
     HealthController,
     AuthController,
@@ -80,6 +82,7 @@ class SafeErrors implements ExceptionFilter {
     PayrollController,
   ],
   providers: [
+    OnboardingRepository,
     ExpenseRepository,
     Database,
     SessionGuard,

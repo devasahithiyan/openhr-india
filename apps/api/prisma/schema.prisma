@@ -12,6 +12,7 @@ enum Role {
  Employee
 }
 model Company {
+ onboardingTemplates OnboardingTemplate[]
  leaveTypes LeaveType[]
  id String @id @default(uuid()) @db.Uuid
  slug String @unique
@@ -62,6 +63,7 @@ model Session {
  @@map("sessions")
 }
 model Branch {
+ onboardingTemplates OnboardingTemplate[]
  weekdays Int[] @default([1,2,3,4,5])
  holidays Holiday[]
  id String @id @default(uuid()) @db.Uuid
@@ -75,6 +77,7 @@ model Branch {
  @@map("branches")
 }
 model Department {
+ onboardingTemplates OnboardingTemplate[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @map("company_id") @db.Uuid
  name String
@@ -95,6 +98,8 @@ model Designation {
  @@map("designations")
 }
 model Employee {
+ onboarding OnboardingPlan[] @relation("Joiner")
+ buddyPlans OnboardingPlan[] @relation("Buddy")
  claims ExpenseClaim[]
  salaries Salary[]
  payrollReviews PayrollReview[]
@@ -320,4 +325,33 @@ model ExpenseEvent {
  actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
  claim ExpenseClaim @relation(fields:[companyId,claimId],references:[companyId,id])
  @@id([companyId,claimId,revision])
+}
+
+model OnboardingTemplate {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ name String
+ branchId String? @db.Uuid
+ departmentId String? @db.Uuid
+ definitions Json
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch? @relation(fields:[companyId,branchId],references:[companyId,id])
+ department Department? @relation(fields:[companyId,departmentId],references:[companyId,id])
+ plans OnboardingPlan[]
+ @@unique([companyId,id])
+ @@unique([companyId,name])
+}
+model OnboardingPlan {
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ templateId String @db.Uuid
+ buddyId String? @db.Uuid
+ employee Employee @relation("Joiner",fields:[companyId,employeeId],references:[companyId,id])
+ buddy Employee? @relation("Buddy",fields:[companyId,buddyId],references:[companyId,id])
+ template OnboardingTemplate @relation(fields:[companyId,templateId],references:[companyId,id])
+ startedFor String
+ tasks Json
+ revision Int @default(1)
+ closedAt DateTime?
+ @@id([companyId,employeeId])
 }

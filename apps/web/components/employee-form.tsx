@@ -89,12 +89,19 @@ export function EmployeeForm({ id }: { id?: string }) {
     }
     setBusy(true);
     try {
-      await api(`/employees${id ? `/${id}` : ""}`, {
-        method: id ? "PATCH" : "POST",
-        headers: { "x-csrf-token": user.csrfToken },
-        body: JSON.stringify(result.data),
-      });
-      router.push("/employees");
+      const saved = await api<{ id: string }>(
+        `/employees${id ? `/${id}` : ""}`,
+        {
+          method: id ? "PATCH" : "POST",
+          headers: { "x-csrf-token": user.csrfToken },
+          body: JSON.stringify(result.data),
+        },
+      );
+      router.push(
+        form.get("startOnboarding") === "on"
+          ? "/onboarding?employee=" + saved.id
+          : "/employees",
+      );
       router.refresh();
     } catch (e) {
       if (e instanceof ApiError)
@@ -307,6 +314,16 @@ export function EmployeeForm({ id }: { id?: string }) {
         )}
         {writable && (
           <div className="flex gap-4 pb-8">
+            {!id && (
+              <label>
+                <input
+                  className="w-auto"
+                  type="checkbox"
+                  name="startOnboarding"
+                />{" "}
+                Choose an onboarding template after saving
+              </label>
+            )}
             <button disabled={busy}>
               {busy ? "Saving…" : "Save employee"}
             </button>

@@ -197,3 +197,6 @@ export interface OrganizationMember {
 }
 export * from "./payroll";
 export * from "./expenses";
+
+export * from "./onboarding-model";
+export * from "./onboarding";
