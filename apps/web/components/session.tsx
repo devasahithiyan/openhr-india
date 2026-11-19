@@ -90,6 +90,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           {[
             ["/employees", "People"],
             ["/organization", "Org chart"],
+            [
+              "/payroll",
+              user.role === "Admin" || user.role === "HR"
+                ? "Payroll"
+                : "My payslip",
+            ],
             ["/time/leave", "Leave"],
             ["/time/calendar", "Calendar"],
             ["/time/attendance", "Attendance"],

@@ -30,3 +30,12 @@ Errors use `{message,fields?:[{path,message}]}`. Validation returns 400, unauthe
 Authenticated `GET /api/time` returns company policies, branch schedules, visible requests, attendance and corrections. Use `?section=calendar` for approved absences without reasons or correction details. Employees see themselves, Managers also see direct reports, and Admin/HR see company records.
 
 `POST /api/time` accepts the discriminated `TimeAction` contract in packages/shared/src/time.ts and requires the session CSRF token. Admin/HR actions are type, week, holiday and removeHoliday. Linked employees can apply, withdraw, clock and correct. Reviewers use leaveDecision and correctionDecision. Self-approval is forbidden. Branch schedules default to Monday–Friday and HR can change them. Approved and pending requests retain their original working-day snapshot. Annual opening allocations are per leave type and calendar year. Corrections cover one India-local day and replace its punches only after approval.
+
+### Monthly payroll pilot
+
+All requests use the existing session and company scope. Writes require Origin and CSRF validation. Monetary values are integer paise.
+
+- `GET /api/payroll?month=2025-03` returns the register and preview fingerprint for HR/Admin. Employees and managers receive only their own published slip. The API returns an empty list for unpublished personal periods.
+- `POST /api/payroll` with action `salary` takes an employeeId, an effective YYYY-MM-DD date and components with name, monthly paise and pfWage. A new date adds a revision. Resaving the same date replaces that revision.
+- Action `review` takes employeeId, month, the employee preview hash and an assessment with esi, pt, lwf, tds, a worksheet reference and standardCappedPF set to true. This records the reviewer's membership. A changed pay calculation or attendance exception list requires a fresh review.
+- Admin action `publish` takes month and the register hash. An incomplete or stale draft returns 409. Publication atomically stores one snapshot per employee. A repeated publication returns the closed register.
