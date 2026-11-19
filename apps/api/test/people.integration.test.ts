@@ -373,6 +373,33 @@ describe("real database Auth + People API", () => {
       }),
     ).rejects.toMatchObject({ code: "P2003" });
   });
+  it("returns only visible reporting lines and directory fields in the org chart", async () => {
+    const chart = (cookie: string) =>
+      request(app.getHttpServer())
+        .get("/api/organization")
+        .set("Cookie", cookie)
+        .expect(200);
+    const employee = await login(undefined, `employee-${suffix}@example.test`);
+    const manager = await login(undefined, `manager-${suffix}@example.test`);
+    const ownNode = {
+      id: employeeId,
+      code: "REPORT",
+      name: expect.any(String),
+      managerId: null,
+      department: { name: "Operations" },
+      designation: { name: "Associate" },
+    };
+    expect((await chart(cookies(employee))).body).toEqual([ownNode]);
+    const team = (await chart(cookies(manager))).body;
+    expect(team).toHaveLength(2);
+    expect(team).toContainEqual({ ...ownNode, managerId });
+    expect((await chart(cookie)).body).toContainEqual(
+      expect.objectContaining({ id: outsiderId }),
+    );
+    expect((await chart(cookies(await login(`other-${suffix}`)))).body).toEqual(
+      [],
+    );
+  });
   it("limits managers to self/direct reports and withholds report private fields", async () => {
     const signed = await login(undefined, `manager-${suffix}@example.test`);
     const c = cookies(signed);

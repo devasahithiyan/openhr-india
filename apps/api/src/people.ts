@@ -22,6 +22,7 @@ import {
   employeePatchSchema,
   privateFields,
   referenceSchema,
+  type OrganizationMember,
   type EmployeePatch,
   type EmployeeRecord,
 } from "@openhr/shared";
@@ -142,6 +143,28 @@ export class PeopleRepository {
     });
     if (!record) throw new NotFoundException("Employee not found");
     return this.present(record, actor);
+  }
+  async organization(actor: Actor): Promise<OrganizationMember[]> {
+    const members = await this.db.employee.findMany({
+      where: this.visibility(actor),
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        managerId: true,
+        designation: { select: { name: true } },
+        department: { select: { name: true } },
+      },
+      orderBy: [{ name: "asc" }, { code: "asc" }],
+    });
+    const visible = new Set(members.map((member) => member.id));
+    return members.map((member) => ({
+      ...member,
+      managerId:
+        member.managerId && visible.has(member.managerId)
+          ? member.managerId
+          : null,
+    }));
   }
   async references(actor: Actor) {
     const where = { companyId: actor.companyId };
@@ -360,6 +383,9 @@ export class PeopleController {
     @Body() body: unknown,
   ) {
     return this.people.save(req.actor, body, id);
+  }
+  @Get("organization") organization(@Req() req: AuthRequest) {
+    return this.people.organization(req.actor);
   }
   @Get("references") references(@Req() req: AuthRequest) {
     return this.people.references(req.actor);

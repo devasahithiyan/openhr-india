@@ -21,6 +21,7 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 
 - **Sign-in and roles:** one login per person, with company-specific roles (Admin, HR, Manager, Employee) checked on the server.
 - **Multiple companies:** each company's data is isolated at the database level.
+- **Org chart:** expand reporting lines and open employee profiles from the workspace navigation. Admin and HR see the company, managers see themselves and their direct reports, and employees see their own record.
 - **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
 - **Leave and attendance:** configurable annual leave, branch holidays and workweeks, team calendar, daily punches and reviewed corrections.
 - **Private identifiers protected:** PAN, bank account, UAN, ESIC and IFSC are encrypted and shown masked. Only Aadhaar's last four digits are stored.

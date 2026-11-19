@@ -89,6 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         <nav aria-label="Workspace" className="workspace-nav">
           {[
             ["/employees", "People"],
+            ["/organization", "Org chart"],
             ["/time/leave", "Leave"],
             ["/time/calendar", "Calendar"],
             ["/time/attendance", "Attendance"],

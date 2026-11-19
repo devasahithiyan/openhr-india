@@ -186,3 +186,12 @@ export interface ReferenceData {
 
 export { z, ZodError } from "zod";
 export * from "./time";
+
+export interface OrganizationMember {
+  id: string;
+  name: string;
+  code: string;
+  managerId: string | null;
+  designation: { name: string };
+  department: { name: string };
+}
