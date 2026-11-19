@@ -78,10 +78,12 @@ export function AdminPayroll() {
             <li
               key={s.id}
               aria-current={current ? "step" : undefined}
-              className={`rounded-lg border-t-4 bg-white px-4 py-3 ring-1 ring-line ${
-                done ? "border-t-leaf" : current ? "border-t-haldi" : "border-t-line"
-              }`}
+              className="rounded-lg bg-white px-4 py-3 ring-1 ring-line"
             >
+              <span
+                aria-hidden
+                className={`mb-2 block h-1 w-10 rounded-full ${done ? "bg-leaf" : current ? "bg-haldi" : "bg-line"}`}
+              />
               <p className="text-[13px] text-muted">
                 Step {i + 1} {done ? "done" : current ? "in progress" : ""}
               </p>
