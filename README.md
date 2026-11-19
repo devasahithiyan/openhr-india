@@ -4,7 +4,7 @@
 
 OpenHR India aims to give startups, SMEs and growing teams a free, self-hostable alternative to commercial HRMS tools, with Indian labour law and statutory compliance built in from day one rather than bolted on.
 
-> 🚧 **Status: early development.** Phase 0 (foundations) is done: sign-in, roles and the employee master work end to end. Leave, payroll and compliance are next. Ideas, issues and contributions are very welcome.
+> 🚧 **Status: early development.** Phase 0 (foundations) is done: sign-in, roles and the employee master work end to end. Leave requests, branch calendars and daily attendance are available. Payroll and compliance are planned. Ideas, issues and contributions are very welcome.
 
 ### 👀 Try the demo: [openhr-india.vercel.app](https://openhr-india.vercel.app)
 
@@ -22,6 +22,7 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 - **Sign-in and roles:** one login per person, with company-specific roles (Admin, HR, Manager, Employee) checked on the server.
 - **Multiple companies:** each company's data is isolated at the database level.
 - **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
+- **Leave and attendance:** configurable annual leave, branch holidays and workweeks, team calendar, daily punches and reviewed corrections.
 - **Private identifiers protected:** PAN, bank account, UAN, ESIC and IFSC are encrypted and shown masked. Only Aadhaar's last four digits are stored.
 
 | Part                        | Stack                      | Folder                                       |
@@ -71,7 +72,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for phasing.
 
 ## Getting started
 
-The real app now has a company-isolated Auth + People foundation. Payroll, leave and tax screens in `prototype/` are still illustrative demos, separate from the real application.
+The real app now has a company-isolated Auth + People foundation. Illustrative payroll and tax screens in `prototype/` are still illustrative demos, separate from the real application.
 
 ### Run the whole foundation with Docker
 
@@ -156,3 +157,9 @@ OpenHR India is provided as-is. Statutory rates and rules change frequently; alw
 ## License
 
 [MIT](LICENSE)
+
+### Leave and attendance
+
+After applying migrations, open **Leave**, **Calendar** or **Attendance** in the web workspace. HR can create an annual leave type with an opening balance per employee and configure each branch’s working days and holidays. The fictional demo seed includes an annual policy for the current year.
+
+Employees preview charged working days, submit requests and withdraw pending requests. Pending days reserve balance. Managers can approve or reject direct reports’ requests, and HR can review company requests. The team calendar shows names on approved working days. Daily check-in and check-out use India Standard Time. Employees can request a correction for a missed entry, and approval applies the corrected times to the daily register.

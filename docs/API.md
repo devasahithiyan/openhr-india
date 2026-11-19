@@ -2,20 +2,20 @@
 
 All routes are under `/api`. The web app forwards `/api/*` to Nest on the same origin. Tenant context comes from the session membership, never a request's `companyId`. Responses are `Cache-Control: no-store`. No public signup or company-switching UI exists yet; sign out and use the other workspace slug.
 
-| Method | Route | Access / behaviour |
-| --- | --- | --- |
-| GET | `/health` | Process liveness, no personal data |
-| POST | `/auth/login` | `{companySlug,email,password}`; same-origin required; sets HTTP-only session cookie, returns CSRF token |
-| GET | `/auth/me` | Current email, role, employee linkage, company and CSRF token |
-| POST | `/auth/logout` | Revokes session and clears cookie; returns 204 |
-| GET | `/employees?q=&page=1` | Scoped search; `{items,total,page,pageSize:25}` |
-| GET | `/employees/:id` | Scoped employee detail; inaccessible IDs return 404 |
-| POST | `/employees` | Admin/HR only; validated employee input |
-| PATCH | `/employees/:id` | Admin/HR only; partial update |
-| GET | `/references` | Company's branches, departments, designations and visible manager candidates |
-| POST | `/references/branches` | Admin/HR; `{name,state}` (state is full Indian state/UT name) |
-| POST | `/references/departments` | Admin/HR; `{name}` |
-| POST | `/references/designations` | Admin/HR; `{name}` |
+| Method | Route                      | Access / behaviour                                                                                      |
+| ------ | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET    | `/health`                  | Process liveness, no personal data                                                                      |
+| POST   | `/auth/login`              | `{companySlug,email,password}`; same-origin required; sets HTTP-only session cookie, returns CSRF token |
+| GET    | `/auth/me`                 | Current email, role, employee linkage, company and CSRF token                                           |
+| POST   | `/auth/logout`             | Revokes session and clears cookie; returns 204                                                          |
+| GET    | `/employees?q=&page=1`     | Scoped search; `{items,total,page,pageSize:25}`                                                         |
+| GET    | `/employees/:id`           | Scoped employee detail; inaccessible IDs return 404                                                     |
+| POST   | `/employees`               | Admin/HR only; validated employee input                                                                 |
+| PATCH  | `/employees/:id`           | Admin/HR only; partial update                                                                           |
+| GET    | `/references`              | Company's branches, departments, designations and visible manager candidates                            |
+| POST   | `/references/branches`     | Admin/HR; `{name,state}` (state is full Indian state/UT name)                                           |
+| POST   | `/references/departments`  | Admin/HR; `{name}`                                                                                      |
+| POST   | `/references/designations` | Admin/HR; `{name}`                                                                                      |
 
 Authenticated writes require the exact configured `Origin` plus `X-CSRF-Token` from `/auth/me`. API cookies expire after eight hours. Role changes apply on the next request; CLI membership/password changes revoke affected sessions. The process-local login throttle caps failed attempts per IP and per company/email window (10 per 15 minutes); use a shared reverse-proxy rate limit before horizontally scaling. Do not configure proxy trust without validating the proxy chain.
 
@@ -24,3 +24,9 @@ Employee input requires code, name, ISO date of joining, branchId, departmentId 
 Private values are write-only. Admin/HR and the employee themselves receive masked private fields; Managers receive no private fields for direct reports. Omitting a private field on PATCH preserves it; explicit null clears it. The UI's blank private fields preserve existing values and its Clear checkboxes send null. Never send a displayed mask as an input value. Non-HR users cannot edit employee records in this slice.
 
 Errors use `{message,fields?:[{path,message}]}`. Validation returns 400, unauthenticated 401, forbidden 403, unavailable records 404 and duplicate or concurrent writes 409. Database errors and request values are never serialized or logged.
+
+## Leave and attendance
+
+Authenticated `GET /api/time` returns company policies, branch schedules, visible requests, attendance and corrections. Use `?section=calendar` for approved absences without reasons or correction details. Employees see themselves, Managers also see direct reports, and Admin/HR see company records.
+
+`POST /api/time` accepts the discriminated `TimeAction` contract in packages/shared/src/time.ts and requires the session CSRF token. Admin/HR actions are type, week, holiday and removeHoliday. Linked employees can apply, withdraw, clock and correct. Reviewers use leaveDecision and correctionDecision. Self-approval is forbidden. Branch schedules default to Monday–Friday and HR can change them. Approved and pending requests retain their original working-day snapshot. Annual opening allocations are per leave type and calendar year. Corrections cover one India-local day and replace its punches only after approval.

@@ -71,12 +71,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     );
   return (
     <Context.Provider value={user}>
-      <header className="border-b border-line bg-white">
+      <header className="workspace-header">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <Link
-            href="/employees"
-            className="text-xl font-bold text-indigo-deep"
-          >
+          <Link href="/employees" className="brand text-xl font-bold">
             OpenHR India
           </Link>
           <div className="flex flex-wrap items-center gap-4">
@@ -89,6 +86,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        <nav aria-label="Workspace" className="workspace-nav">
+          {[
+            ["/employees", "People"],
+            ["/time/leave", "Leave"],
+            ["/time/calendar", "Calendar"],
+            ["/time/attendance", "Attendance"],
+          ].map(([href, title]) => (
+            <Link
+              key={href}
+              href={href!}
+              aria-current={pathname.startsWith(href!) ? "page" : undefined}
+            >
+              {title}
+            </Link>
+          ))}
+        </nav>
       </header>
       <main className="mx-auto max-w-6xl px-5 py-8">
         {error && (

@@ -8,7 +8,7 @@ const slip = computePayslip(priya, 10);
 
 export function Landing() {
   return (
-    <div className="min-h-screen bg-paper">
+    <div className="demo-landing min-h-screen bg-paper">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-8">
         <Logo />
         <a

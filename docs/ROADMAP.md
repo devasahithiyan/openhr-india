@@ -13,9 +13,12 @@ A rough phasing plan. Open an issue to discuss changes.
 - [ ] Employee self-service portal
 
 ## Phase 2 — Attendance & Leave
-- [ ] Leave types and policies, accrual and carry-forward
-- [ ] State-wise holiday calendars
-- [ ] Attendance, shifts and regularisation
+- [x] Leave requests, approvals, withdrawals, annual opening balances and decision history
+- [ ] Accrual and carry-forward
+- [x] Branch workweeks, holidays and team absence calendar
+- [ ] Shared state holiday templates
+- [x] Daily attendance and manager-reviewed corrections
+- [ ] Shift scheduling
 
 ## Phase 3 — Payroll & Compliance
 - [ ] Salary structures and components
