@@ -154,6 +154,28 @@ async function seed() {
     "Employee",
     "DEMO002",
   );
+  const year = Number(
+    new Intl.DateTimeFormat("en", {
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    }).format(new Date()),
+  );
+  await db.leaveType.upsert({
+    where: {
+      companyId_year_name: {
+        companyId: company.id,
+        year,
+        name: "Demo annual leave",
+      },
+    },
+    create: {
+      companyId: company.id,
+      year,
+      name: "Demo annual leave",
+      openingDays: 12,
+    },
+    update: {},
+  });
   console.log("Demo seed ready. See README for fictional login credentials.");
 }
 async function main() {

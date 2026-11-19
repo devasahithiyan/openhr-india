@@ -12,6 +12,7 @@ enum Role {
  Employee
 }
 model Company {
+ leaveTypes LeaveType[]
  id String @id @default(uuid()) @db.Uuid
  slug String @unique
  name String
@@ -30,6 +31,8 @@ model User {
  @@map("users")
 }
 model Membership {
+ leaveDecisions LeaveRequest[]
+ correctionsDecided Correction[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @map("company_id") @db.Uuid
  userId String @map("user_id") @db.Uuid
@@ -56,6 +59,8 @@ model Session {
  @@map("sessions")
 }
 model Branch {
+ weekdays Int[] @default([1,2,3,4,5])
+ holidays Holiday[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @map("company_id") @db.Uuid
  name String
@@ -87,6 +92,9 @@ model Designation {
  @@map("designations")
 }
 model Employee {
+ leave LeaveRequest[]
+ attendance Attendance[]
+ corrections Correction[]
  id String @id @default(uuid()) @db.Uuid
  companyId String @map("company_id") @db.Uuid
  code String
@@ -161,4 +169,75 @@ enum IndianState {
  Ladakh @map("Ladakh")
  Lakshadweep @map("Lakshadweep")
  Puducherry @map("Puducherry")
+}
+
+enum RequestStatus {
+ Pending
+ Approved
+ Rejected
+ Withdrawn
+}
+model LeaveType {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ name String
+ openingDays Int
+ year Int
+ company Company @relation(fields:[companyId], references:[id])
+ requests LeaveRequest[]
+ @@unique([companyId,id])
+ @@unique([companyId,year,name])
+}
+model Holiday {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ branchId String @db.Uuid
+ day String
+ name String
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ @@unique([companyId,branchId,day])
+}
+model LeaveRequest {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ typeId String @db.Uuid
+ start String
+ end String
+ days String[]
+ reason String
+ status RequestStatus @default(Pending)
+ createdAt DateTime @default(now())
+ decidedAt DateTime?
+ decidedBy String? @db.Uuid
+ decision Membership? @relation(fields:[companyId,decidedBy],references:[companyId,id])
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ type LeaveType @relation(fields:[companyId,typeId],references:[companyId,id])
+ @@index([companyId,employeeId,start])
+}
+model Attendance {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ day String
+ checkIn DateTime
+ checkOut DateTime?
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ @@unique([companyId,employeeId,day])
+}
+model Correction {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ day String
+ checkIn DateTime
+ checkOut DateTime
+ reason String
+ status RequestStatus @default(Pending)
+ createdAt DateTime @default(now())
+ decidedAt DateTime?
+ decidedBy String? @db.Uuid
+ decision Membership? @relation(fields:[companyId,decidedBy],references:[companyId,id])
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ @@index([companyId,employeeId,day])
 }

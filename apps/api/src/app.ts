@@ -15,6 +15,7 @@ import { type Response } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { Database } from "./db";
+import { TimeController } from "./time";
 import { AuthController, SessionGuard } from "./auth";
 import { PeopleController, PeopleRepository } from "./people";
 @Controller()
@@ -68,7 +69,12 @@ class SafeErrors implements ExceptionFilter {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, PeopleController],
+  controllers: [
+    HealthController,
+    AuthController,
+    PeopleController,
+    TimeController,
+  ],
   providers: [Database, SessionGuard, PeopleRepository],
 })
 export class AppModule {}

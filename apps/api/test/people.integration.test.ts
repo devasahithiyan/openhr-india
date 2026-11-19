@@ -186,6 +186,11 @@ afterAll(async () => {
     const memberships = await db.membership.findMany({
       where: { companyId: { in: [companyId, otherCompanyId] } },
     });
+    await db.correction.deleteMany({ where: { companyId } });
+    await db.attendance.deleteMany({ where: { companyId } });
+    await db.leaveRequest.deleteMany({ where: { companyId } });
+    await db.leaveType.deleteMany({ where: { companyId } });
+    await db.holiday.deleteMany({ where: { companyId } });
     await db.membership.deleteMany({
       where: { companyId: { in: [companyId, otherCompanyId] } },
     });
@@ -395,6 +400,115 @@ describe("real database Auth + People API", () => {
           .send({ name: "No" })
       ).status,
     ).toBe(403);
+  });
+  it("persists branch-aware leave, reserves balances and restricts approval", async () => {
+    const signed = await login(undefined, `employee-${suffix}@example.test`),
+      manager = await login(undefined, `manager-${suffix}@example.test`),
+      foreign = await login(`other-${suffix}`);
+    const act = (session: request.Response, body: object) =>
+      request(app.getHttpServer())
+        .post("/api/time")
+        .set("Cookie", cookies(session))
+        .set("Origin", origin)
+        .set("x-csrf-token", session.body.csrfToken)
+        .send(body);
+    const read = (session: request.Response, path = "/api/time") =>
+      request(app.getHttpServer()).get(path).set("Cookie", cookies(session));
+    expect(
+      (
+        await write("/api/time", {
+          action: "type",
+          year: 2026,
+          name: "Test leave",
+          openingDays: 2,
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await write("/api/time", {
+          action: "holiday",
+          day: "2026-11-23",
+          branchId: ownBranch,
+          name: "Test holiday",
+        })
+      ).status,
+    ).toBe(201);
+    const typeId = (await read(signed)).body.types[0].id;
+    const apply = {
+      action: "apply",
+      typeId,
+      start: "2026-11-20",
+      end: "2026-11-23",
+      reason: "private test reason",
+    };
+    expect((await act(signed, apply)).status).toBe(201);
+    const first = (await read(signed)).body;
+    expect(first.types[0].pending).toBe(1);
+    expect((await act(signed, apply)).status).toBe(400);
+    expect(
+      (await act(signed, { action: "withdraw", id: first.leaves[0].id }))
+        .status,
+    ).toBe(201);
+    expect((await read(signed)).body.types[0].pending).toBe(0);
+    expect((await act(signed, apply)).status).toBe(201);
+    const id = (await read(manager)).body.leaves[0].id;
+    const decision = { action: "leaveDecision", id, approve: true };
+    expect((await act(signed, decision)).status).toBe(404);
+    expect((await act(foreign, decision)).status).toBe(404);
+    expect((await act(manager, decision)).status).toBe(201);
+    expect((await act(manager, decision)).status).toBe(409);
+    const after = await read(
+      await login(undefined, `employee-${suffix}@example.test`),
+    );
+    expect(after.body.types[0]).toMatchObject({ used: 1, pending: 0 });
+    const calendar = await read(manager, "/api/time?section=calendar");
+    expect(calendar.body.leaves).toHaveLength(1);
+    expect(JSON.stringify(calendar.body)).not.toContain("private test reason");
+    expect((await read(foreign)).body.leaves).toEqual([]);
+  });
+  it("records daily punches and applies corrections only after an authorised decision", async () => {
+    const employee = await login(undefined, `employee-${suffix}@example.test`),
+      manager = await login(undefined, `manager-${suffix}@example.test`);
+    const act = (s: request.Response, body: object) =>
+      request(app.getHttpServer())
+        .post("/api/time")
+        .set("Cookie", cookies(s))
+        .set("Origin", origin)
+        .set("x-csrf-token", s.body.csrfToken)
+        .send(body);
+    expect(
+      (await act(employee, { action: "clock", direction: "out" })).status,
+    ).toBe(400);
+    expect(
+      (await act(employee, { action: "clock", direction: "in" })).status,
+    ).toBe(201);
+    expect(
+      (await act(employee, { action: "clock", direction: "in" })).status,
+    ).toBe(409);
+    expect(
+      (await act(employee, { action: "clock", direction: "out" })).status,
+    ).toBe(201);
+    const body = {
+      action: "correct",
+      day: "2026-04-02",
+      checkIn: "2026-04-02T04:00:00Z",
+      checkOut: "2026-04-02T12:00:00Z",
+      reason: "Missed entry",
+    };
+    expect((await act(employee, body)).status).toBe(201);
+    expect((await act(employee, body)).status).toBe(400);
+    const filter = { companyId, employeeId, day: body.day };
+    expect(await db.attendance.count({ where: filter })).toBe(0);
+    const { id } = await db.correction.findFirstOrThrow({ where: filter });
+    const decision = { action: "correctionDecision", id, approve: true };
+    expect((await act(employee, decision)).status).toBe(404);
+    expect((await act(manager, decision)).status).toBe(201);
+    expect(
+      (
+        await db.attendance.findFirstOrThrow({ where: filter })
+      ).checkOut?.toISOString(),
+    ).toBe("2026-04-02T12:00:00.000Z");
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);
