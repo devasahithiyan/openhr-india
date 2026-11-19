@@ -4,7 +4,7 @@
 
 OpenHR India aims to give startups, SMEs and growing teams a free, self-hostable alternative to commercial HRMS tools, with Indian labour law and statutory compliance built in from day one rather than bolted on.
 
-> 🚧 **Status: early development.** Phase 0 (foundations) is done: sign-in, roles and the employee master work end to end. Leave requests, branch calendars and daily attendance are available. Payroll and compliance are planned. Ideas, issues and contributions are very welcome.
+> 🚧 **Status: early development.** Phase 0 (foundations) is done: sign-in, roles and the employee master work end to end. Leave requests, branch calendars and daily attendance are available. A historical Tamil Nadu monthly payroll pilot is available. Ideas, issues and contributions are very welcome.
 
 ### 👀 Try the demo: [openhr-india.vercel.app](https://openhr-india.vercel.app)
 
@@ -21,6 +21,7 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 
 - **Sign-in and roles:** one login per person, with company-specific roles (Admin, HR, Manager, Employee) checked on the server.
 - **Multiple companies:** each company's data is isolated at the database level.
+- **Monthly payroll pilot:** effective-dated compensation, attendance review, approved loss of pay, a monthly register and employee payslips. [Try the payroll pilot](#monthly-payroll-pilot).
 - **Org chart:** search by name or employee code, filter by department, expand or collapse teams and open employee profiles from the workspace navigation. Admin and HR see the company, managers see themselves and their direct reports, and employees see their own record.
 - **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
 - **Leave and attendance:** configurable annual leave, branch holidays and workweeks, team calendar, daily punches and reviewed corrections.
@@ -31,7 +32,7 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 | Web app                     | Next.js, Tailwind CSS      | [`apps/web`](apps/web)                       |
 | API                         | NestJS, Prisma, PostgreSQL | [`apps/api`](apps/api)                       |
 | Shared types and validation | Zod                        | [`packages/shared`](packages/shared)         |
-| Statutory rules (coming)    | Versioned rule data        | [`packages/compliance`](packages/compliance) |
+| Statutory pilot rules    | Versioned rule data        | [`packages/compliance`](packages/compliance) |
 | Clickable demo              | Vite, React                | [`prototype`](prototype)                     |
 
 Why this stack: [ADR 0001](docs/adr/0001-tech-stack.md). API reference: [docs/API.md](docs/API.md).
@@ -164,3 +165,13 @@ OpenHR India is provided as-is. Statutory rates and rules change frequently; alw
 After applying migrations, open **Leave**, **Calendar** or **Attendance** in the web workspace. HR can create an annual leave type with an opening balance per employee and configure each branch’s working days and holidays. The fictional demo seed includes an annual policy for the current year.
 
 Employees preview charged working days, submit requests and withdraw pending requests. Pending days reserve balance. Managers can approve or reject direct reports’ requests, and HR can review company requests. The team calendar shows names on approved working days. Daily check-in and check-out use India Standard Time. Employees can request a correction for a missed entry, and approval applies the corrected times to the daily register.
+
+### Monthly payroll pilot
+
+Run `pnpm db:migrate` and `DEMO_SEED=true pnpm db:seed`. Sign in to **payroll-demo** with the fictional Admin or HR credentials above and open **Payroll → March 2025**. The seeded register has a full-month employee at ₹31,000, a mid-month joiner at ₹16,000 and an employee with one approved unpaid day at ₹30,000. Together they earn ₹77,000 gross.
+
+HR can assign effective-dated monthly components and mark which earnings count as PF wages. The pilot uses calendar-day proration, rounding each component to the nearest paise per salary revision. Approved unpaid leave reduces pay. Pending leave and attendance corrections block close. Missing punches require review and carry no automatic deduction. Existing leave policies are paid by default.
+
+For Tamil Nadu FY 2024–25, the pilot calculates standard capped employee PF using [versioned rule data and official sources](packages/compliance/rules/tn-2024-25.json). HR verifies coverage and enters externally assessed employee ESI, PT, LWF and TDS amounts with a worksheet reference. A zero requires an explicit entry. Use this pilot only for employees whose PF terms and branch history fit the period. Other states, financial years and special PF cases require additional rules. Filing, employer contributions and bank transfers are future work.
+
+Once all rows have been reviewed, an Admin can approve and publish. Sign in as the pilot employee and choose **My payslip** to see the frozen statement. Later salary revisions, attendance changes and repeated publication preserve the original slips.

@@ -313,7 +313,8 @@ function Policy({ data, send }: { data: TimeView; send: Send }) {
       <p>Opening days apply to each employee for the calendar year.</p>
       {data.types.map((t) => (
         <p key={t.id}>
-          {t.name} · {t.year} · {t.openingDays} days
+          {t.name} · {t.year} · {t.openingDays} days ·{" "}
+          {t.unpaid ? "Unpaid" : "Paid"}
         </p>
       ))}
       <form
@@ -326,6 +327,7 @@ function Policy({ data, send }: { data: TimeView; send: Send }) {
               name: value(f, "name"),
               year: Number(f.get("year")),
               openingDays: Number(f.get("days")),
+              unpaid: f.get("unpaid") === "on",
             })
           )
             form.reset();
@@ -349,6 +351,10 @@ function Policy({ data, send }: { data: TimeView; send: Send }) {
         <label>
           Opening days
           <input type="number" name="days" min="0" max="366" required />
+        </label>
+        <label>
+          <input type="checkbox" name="unpaid" className="w-auto" /> Unpaid
+          leave (deduct approved days from payroll)
         </label>
         <button>Add policy</button>
       </form>

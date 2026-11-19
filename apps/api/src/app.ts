@@ -15,6 +15,7 @@ import { type Response } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { Database } from "./db";
+import { PayrollController, PayrollRepository } from "./payroll";
 import { TimeController } from "./time";
 import { AuthController, SessionGuard } from "./auth";
 import { PeopleController, PeopleRepository } from "./people";
@@ -74,8 +75,9 @@ class SafeErrors implements ExceptionFilter {
     AuthController,
     PeopleController,
     TimeController,
+    PayrollController,
   ],
-  providers: [Database, SessionGuard, PeopleRepository],
+  providers: [Database, SessionGuard, PeopleRepository, PayrollRepository],
 })
 export class AppModule {}
 export async function createApp() {

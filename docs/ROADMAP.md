@@ -21,9 +21,10 @@ A rough phasing plan. Open an issue to discuss changes.
 - [ ] Shift scheduling
 
 ## Phase 3 — Payroll & Compliance
-- [ ] Salary structures and components
-- [ ] Monthly payroll run, LOP, arrears, payslips
-- [ ] PF, ESI, Professional Tax, LWF
+- [x] Effective-dated monthly salary structures and components
+- [x] Historical Tamil Nadu pilot: monthly register, approved LOP, locked payslips and standard capped employee PF
+- [ ] Arrears and payroll corrections after close
+- [ ] Broader PF coverage and automated ESI, Professional Tax and LWF
 - [ ] TDS (old and new regimes), investment declarations, Form 16
 - [ ] ECR, challans and bank transfer files
 

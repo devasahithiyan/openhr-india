@@ -195,3 +195,4 @@ export interface OrganizationMember {
   designation: { name: string };
   department: { name: string };
 }
+export * from "./payroll";
