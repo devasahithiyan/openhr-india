@@ -39,3 +39,9 @@ All requests use the existing session and company scope. Writes require Origin a
 - `POST /api/payroll` with action `salary` takes an employeeId, an effective YYYY-MM-DD date and components with name, monthly paise and pfWage. A new date adds a revision. Resaving the same date replaces that revision.
 - Action `review` takes employeeId, month, the employee preview hash and an assessment with esi, pt, lwf, tds, a worksheet reference and standardCappedPF set to true. This records the reviewer's membership. A changed pay calculation or attendance exception list requires a fresh review.
 - Admin action `publish` takes month and the register hash. An incomplete or stale draft returns 409. Publication atomically stores one snapshot per employee. A repeated publication returns the closed register.
+
+### Expense claims
+
+`GET /api/expenses` returns visible claims, itemized amounts in paise, status history and allowed actions. HR and Admin also receive the company total approved and awaiting reimbursement. Managers can see their own claims and direct reports’ claims. Employees see their own.
+
+`POST /api/expenses` takes an action. Submit accepts one to forty items (date in `day`, category, integer `paise` and business purpose). Resubmit takes corrected items. Approve and return operate on submitted claims and return requires a reason. Reimburse takes the actual payment day and a reference. Every action after submission includes the claim ID and the last seen revision. A stale update returns 409. Repeating a completed payment with the same date and reference returns the existing claim ID.

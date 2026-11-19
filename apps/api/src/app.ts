@@ -16,6 +16,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { Database } from "./db";
 import { PayrollController, PayrollRepository } from "./payroll";
+import { ExpenseController, ExpenseRepository } from "./expenses";
 import { TimeController } from "./time";
 import { AuthController, SessionGuard } from "./auth";
 import { PeopleController, PeopleRepository } from "./people";
@@ -71,13 +72,20 @@ class SafeErrors implements ExceptionFilter {
 }
 @Module({
   controllers: [
+    ExpenseController,
     HealthController,
     AuthController,
     PeopleController,
     TimeController,
     PayrollController,
   ],
-  providers: [Database, SessionGuard, PeopleRepository, PayrollRepository],
+  providers: [
+    ExpenseRepository,
+    Database,
+    SessionGuard,
+    PeopleRepository,
+    PayrollRepository,
+  ],
 })
 export class AppModule {}
 export async function createApp() {

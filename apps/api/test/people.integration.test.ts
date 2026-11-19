@@ -1,3 +1,4 @@
+import type { ExpenseView } from "@openhr/shared";
 import type { PayRow, PayrollView } from "@openhr/shared";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import request from "supertest";
@@ -191,6 +192,8 @@ afterAll(async () => {
     await db.payrollRun.deleteMany({ where: { companyId } });
     await db.payrollReview.deleteMany({ where: { companyId } });
     await db.salary.deleteMany({ where: { companyId } });
+    await db.expenseEvent.deleteMany({ where: { companyId } });
+    await db.expenseClaim.deleteMany({ where: { companyId } });
     await db.correction.deleteMany({ where: { companyId } });
     await db.attendance.deleteMany({ where: { companyId } });
     await db.leaveRequest.deleteMany({ where: { companyId } });
@@ -694,6 +697,102 @@ describe("real database Auth + People API", () => {
       (await read(cookies(employeeSession))).rows.map((r) => r.employeeId),
     ).toEqual([employeeId]);
     expect((await read(cookies(other))).rows).toEqual([]);
+  });
+  it("routes itemized claims, returns for revision and records exactly one reimbursement", async () => {
+    const emp = await login(undefined, `employee-${suffix}@example.test`);
+    const manager = await login(undefined, `manager-${suffix}@example.test`);
+    const foreign = await login(`other-${suffix}`);
+    const act = (session: request.Response, body: object) =>
+      request(app.getHttpServer())
+        .post("/api/expenses")
+        .set("Cookie", cookies(session))
+        .set("Origin", origin)
+        .set("x-csrf-token", session.body.csrfToken)
+        .send(body);
+    const list = async (c: string): Promise<ExpenseView> =>
+      (
+        await request(app.getHttpServer())
+          .get("/api/expenses")
+          .set("Cookie", c)
+          .expect(200)
+      ).body;
+    const items = [
+      {
+        day: "2026-04-02",
+        category: "Travel",
+        paise: 70000,
+        purpose: "Client visit",
+      },
+      { day: "2026-04-02", category: "Meals", paise: 15000, purpose: "Lunch" },
+    ];
+    expect((await act(emp, { action: "submit", items: [] })).status).toBe(400);
+    const { id } = (await act(emp, { action: "submit", items }).expect(201))
+      .body;
+    expect((await list(cookies(manager))).claims[0]).toMatchObject({
+      total: 85000,
+      canReview: true,
+    });
+    expect((await list(cookies(foreign))).claims).toHaveLength(0);
+    expect(
+      (await act(foreign, { action: "approve", id, revision: 1 })).status,
+    ).toBe(404);
+    expect(
+      (await act(emp, { action: "approve", id, revision: 1 })).status,
+    ).toBe(403);
+    expect(
+      (await write("/api/expenses", { action: "approve", id, revision: 1 }))
+        .status,
+    ).toBe(403);
+    await act(manager, {
+      action: "return",
+      id,
+      revision: 1,
+      reason: "Specify the customer meeting",
+    }).expect(201);
+    items[0]!.purpose = "Demo client design review";
+    await act(emp, { action: "resubmit", id, revision: 2, items }).expect(201);
+    await act(manager, { action: "approve", id, revision: 1 }).expect(409);
+    await act(manager, { action: "approve", id, revision: 3 }).expect(201);
+    expect((await list(cookie)).outstanding).toBe(85000);
+    const payment = {
+      action: "reimburse",
+      id,
+      revision: 4,
+      day: "2026-04-03",
+      reference: "DEMO-EXP-001",
+    };
+    await act(manager, payment).expect(403);
+    const paid = await Promise.all([
+      write("/api/expenses", payment),
+      write("/api/expenses", payment),
+    ]);
+    expect(paid.map((r) => r.status)).toEqual([201, 201]);
+    expect(
+      (await write("/api/expenses", { ...payment, reference: "DIFFERENT" }))
+        .status,
+    ).toBe(409);
+    expect((await list(cookie)).outstanding).toBe(0);
+    const claim = (await list(cookies(emp))).claims[0]!;
+    expect(claim.history.map((e) => e.status)).toEqual([
+      "Submitted",
+      "Returned",
+      "Submitted",
+      "Approved",
+      "Reimbursed",
+    ]);
+    expect(claim.paymentReference).toBe("DEMO-EXP-001");
+    const own = (await act(manager, { action: "submit", items })).body.id;
+    await act(manager, { action: "approve", id: own, revision: 1 }).expect(403);
+    expect(
+      (
+        await write("/api/expenses", {
+          action: "approve",
+          id: own,
+          revision: 1,
+        })
+      ).status,
+    ).toBe(201);
+    expect((await list(cookies(emp))).claims).toHaveLength(1);
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);
