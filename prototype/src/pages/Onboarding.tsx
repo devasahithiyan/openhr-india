@@ -6,7 +6,7 @@ import {useDemo} from "../lib/store";
 export function OnboardingDemo({admin=false}:{admin?:boolean}){
  const {onboarding,saveOnboarding}=useDemo(),[manager,setManager]=useState(false),[error,setError]=useState("");
  const viewer:Viewer=admin?(manager?{role:"Manager",employeeId:"manager"}:{role:"HR",employeeId:null}):{role:"Employee",employeeId:"designer"};
- const visible={...onboarding,plans:onboarding.plans.filter(p=>viewer.role==="HR"||p.employeeId===viewer.employeeId||(manager&&onboarding.people.find(e=>e.id===p.employeeId)?.managerId===viewer.employeeId))};
+ const visible={...onboarding,contacts:onboarding.people,plans:onboarding.plans.filter(p=>viewer.role==="HR"||p.employeeId===viewer.employeeId||(manager&&onboarding.people.find(e=>e.id===p.employeeId)?.managerId===viewer.employeeId))};
  async function send(c:OnboardingAction){
  try{
  let next=onboarding;
@@ -15,7 +15,7 @@ export function OnboardingDemo({admin=false}:{admin?:boolean}){
  const p=onboarding.people.find(p=>p.id===c.employeeId)!,existing=visible.plans.find(plan=>plan.employeeId===p.id);
  if(c.action==="start"){if(viewer.role!=="HR")throw Error("HR access required");const t=onboarding.templates.find(t=>t.id===c.templateId)!;if(!matchesTemplate(p,t)||(!p.managerId&&t.definitions.some(d=>d.owner==="Manager")))throw Error("Check template scope and reporting manager");
  if(existing&&existing.templateId!==t.id)throw Error("A different plan already exists");
- if(!existing)next={...next,plans:[...next.plans,{employeeId:p.id,templateId:t.id,startedFor:p.joined,tasks:makeTasks(t,p.joined),revision:1,closedAt:null,buddyId:null}]};}
+ if(!existing)next={...next,plans:[...next.plans,{employeeId:p.id,templateId:t.id,startedFor:p.joined,tasks:makeTasks(t,p.joined),revision:1,closedAt:null,buddyId:null,week:{schedule:"09:30 · Meet the design team in the Chennai studio.\n11:00 · Product orientation.",welcomeUrl:location.origin+"/welcome.html",policyTitle:"Studio handbook",policyVersion:"2026.1",policyUrl:location.origin+"/welcome.html",acknowledgements:[],blockers:[]}}]};}
  else{if(!existing)throw Error("Plan not found");const updated=revisePlan(existing,p,viewer,c,new Date().toISOString(),viewer.employeeId??"hr");next={...next,plans:next.plans.map(plan=>plan.employeeId===p.id?updated:plan),people:next.people.map(e=>e.id===p.id&&c.action==="reschedule"?{...e,joined:c.day}:e)};}
  }
  saveOnboarding(next);setError("");return true;
