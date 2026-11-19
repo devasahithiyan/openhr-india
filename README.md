@@ -4,16 +4,35 @@
 
 OpenHR India aims to give startups, SMEs and growing teams a free, self-hostable alternative to commercial HRMS tools, with Indian labour law and statutory compliance built in from day one rather than bolted on.
 
-> 🚧 **Status: early stage.** The project is just getting started. Ideas, issues and contributions are very welcome.
+> 🚧 **Status: early development.** Phase 0 (foundations) is done: sign-in, roles and the employee master work end to end. Leave, payroll and compliance are next. Ideas, issues and contributions are very welcome.
 
 ### 👀 Try the demo: [openhr-india.vercel.app](https://openhr-india.vercel.app)
 
-A clickable prototype with sample data showing both sides of the platform:
+A clickable prototype with sample data showing where the platform is headed:
 
 - **HR admin view:** run monthly payroll (PF, ESI, PT, TDS), approve leave, track statutory filings.
 - **Employee view:** view payslips, apply for leave, compare old vs new tax regimes.
 
-The demo is front-end only (no backend yet) and lives in [`prototype/`](prototype/). Tax and statutory figures are illustrative.
+The demo is front-end only and lives in [`prototype/`](prototype/). It is separate from the real application below, and its tax and statutory figures are illustrative.
+
+## What works today
+
+The real application (run it yourself with [Getting started](#getting-started)) currently covers:
+
+- **Sign-in and roles:** one login per person, with company-specific roles (Admin, HR, Manager, Employee) checked on the server.
+- **Multiple companies:** each company's data is isolated at the database level.
+- **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
+- **Private identifiers protected:** PAN, bank account, UAN, ESIC and IFSC are encrypted and shown masked. Only Aadhaar's last four digits are stored.
+
+| Part | Stack | Folder |
+| --- | --- | --- |
+| Web app | Next.js, Tailwind CSS | [`apps/web`](apps/web) |
+| API | NestJS, Prisma, PostgreSQL | [`apps/api`](apps/api) |
+| Shared types and validation | Zod | [`packages/shared`](packages/shared) |
+| Statutory rules (coming) | Versioned rule data | [`packages/compliance`](packages/compliance) |
+| Clickable demo | Vite, React | [`prototype`](prototype) |
+
+Why this stack: [ADR 0001](docs/adr/0001-tech-stack.md). API reference: [docs/API.md](docs/API.md).
 
 ## Why
 
