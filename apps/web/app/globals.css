@@ -1,0 +1,138 @@
+@import "tailwindcss";
+@theme {
+  --font-sans: "Mukta", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #1b2140;
+  --color-muted: #5d6585;
+  --color-paper: #f5f6fa;
+  --color-line: #dcdfea;
+  --color-indigo: #2b3a8c;
+  --color-indigo-deep: #1e2766;
+  --color-indigo-soft: #e7e9f5;
+  --color-haldi: #e8a317;
+}
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+::selection {
+  background: #e8a317;
+  color: #1b2140;
+}
+:focus-visible {
+  outline: 3px solid #2b3a8c;
+  outline-offset: 3px;
+}
+a {
+  text-underline-offset: 4px;
+}
+input,
+select,
+button {
+  font: inherit;
+}
+input,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #abb2c9;
+  border-radius: 6px;
+  background: white;
+  color: #1b2140;
+  caret-color: #2b3a8c;
+}
+input::placeholder {
+  color: #5d6585;
+}
+button,
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: #2b3a8c;
+  color: white;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+button:hover,
+.button:hover {
+  background: #1e2766;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+button.secondary,
+.button.secondary {
+  background: #e7e9f5;
+  color: #1e2766;
+}
+label {
+  display: block;
+  font-weight: 600;
+}
+small {
+  display: block;
+  color: #5d6585;
+  font-size: 14px;
+  font-weight: 400;
+}
+.error {
+  color: #a12b25;
+  background: #fff0ee;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+.field-error {
+  color: #a12b25;
+  font-size: 14px;
+}
+.panel {
+  background: white;
+  border: 1px solid #dcdfea;
+  border-radius: 12px;
+  padding: 24px;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #dcdfea;
+}
+th {
+  font-weight: 600;
+  font-size: 14px;
+  color: #5d6585;
+}
+@media (max-width: 640px) {
+  .panel {
+    padding: 18px;
+  }
+  th,
+  td {
+    padding: 12px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input {
+    transition: background-color 140ms ease-out;
+  }
+}

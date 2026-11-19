@@ -1,0 +1,164 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+enum Role {
+ Admin
+ HR
+ Manager
+ Employee
+}
+model Company {
+ id String @id @default(uuid()) @db.Uuid
+ slug String @unique
+ name String
+ memberships Membership[]
+ branches Branch[]
+ departments Department[]
+ designations Designation[]
+ employees Employee[]
+ @@map("companies")
+}
+model User {
+ id String @id @default(uuid()) @db.Uuid
+ email String @unique
+ passwordHash String @map("password_hash")
+ memberships Membership[]
+ @@map("users")
+}
+model Membership {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ userId String @map("user_id") @db.Uuid
+ role Role
+ employeeId String? @map("employee_id") @db.Uuid
+ company Company @relation(fields:[companyId], references:[id])
+ user User @relation(fields:[userId], references:[id])
+ employee Employee? @relation(fields:[companyId,employeeId], references:[companyId,id])
+ sessions Session[]
+ @@unique([companyId,userId])
+ @@unique([companyId,id])
+ @@unique([companyId,employeeId])
+ @@map("memberships")
+}
+model Session {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ membershipId String @map("membership_id") @db.Uuid
+ tokenHash String @unique @map("token_hash")
+ csrfToken String @map("csrf_token")
+ expiresAt DateTime @map("expires_at")
+ membership Membership @relation(fields:[companyId,membershipId],references:[companyId,id],onDelete:Cascade)
+ @@index([expiresAt])
+ @@map("sessions")
+}
+model Branch {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ name String
+ state IndianState
+ company Company @relation(fields:[companyId],references:[id])
+ employees Employee[]
+ @@unique([companyId,id])
+ @@unique([companyId,name])
+ @@map("branches")
+}
+model Department {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ name String
+ company Company @relation(fields:[companyId],references:[id])
+ employees Employee[]
+ @@unique([companyId,id])
+ @@unique([companyId,name])
+ @@map("departments")
+}
+model Designation {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ name String
+ company Company @relation(fields:[companyId],references:[id])
+ employees Employee[]
+ @@unique([companyId,id])
+ @@unique([companyId,name])
+ @@map("designations")
+}
+model Employee {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ code String
+ name String
+ dateOfJoining DateTime @map("date_of_joining") @db.Date
+ branchId String @map("branch_id") @db.Uuid
+ departmentId String @map("department_id") @db.Uuid
+ designationId String @map("designation_id") @db.Uuid
+ managerId String? @map("manager_id") @db.Uuid
+ company Company @relation(fields:[companyId],references:[id])
+ branch Branch @relation(fields:[companyId,branchId],references:[companyId,id])
+ department Department @relation(fields:[companyId,departmentId],references:[companyId,id])
+ designation Designation @relation(fields:[companyId,designationId],references:[companyId,id])
+ manager Employee? @relation("Reporting",fields:[companyId,managerId],references:[companyId,id])
+ reports Employee[] @relation("Reporting")
+ privateData EmployeePrivate?
+ membership Membership?
+ @@unique([companyId,id])
+ @@unique([companyId,code])
+ @@index([companyId,managerId])
+ @@map("employees")
+}
+model EmployeePrivate {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @map("employee_id") @db.Uuid
+ pan String?
+ aadhaarLast4 String? @map("aadhaar_last4")
+ uan String?
+ esic String?
+ bankAccount String? @map("bank_account")
+ ifsc String?
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id],onDelete:Cascade)
+ @@unique([companyId,employeeId])
+ @@map("employee_private")
+}
+
+enum IndianState {
+ Andhra_Pradesh @map("Andhra Pradesh")
+ Arunachal_Pradesh @map("Arunachal Pradesh")
+ Assam @map("Assam")
+ Bihar @map("Bihar")
+ Chhattisgarh @map("Chhattisgarh")
+ Goa @map("Goa")
+ Gujarat @map("Gujarat")
+ Haryana @map("Haryana")
+ Himachal_Pradesh @map("Himachal Pradesh")
+ Jharkhand @map("Jharkhand")
+ Karnataka @map("Karnataka")
+ Kerala @map("Kerala")
+ Madhya_Pradesh @map("Madhya Pradesh")
+ Maharashtra @map("Maharashtra")
+ Manipur @map("Manipur")
+ Meghalaya @map("Meghalaya")
+ Mizoram @map("Mizoram")
+ Nagaland @map("Nagaland")
+ Odisha @map("Odisha")
+ Punjab @map("Punjab")
+ Rajasthan @map("Rajasthan")
+ Sikkim @map("Sikkim")
+ Tamil_Nadu @map("Tamil Nadu")
+ Telangana @map("Telangana")
+ Tripura @map("Tripura")
+ Uttar_Pradesh @map("Uttar Pradesh")
+ Uttarakhand @map("Uttarakhand")
+ West_Bengal @map("West Bengal")
+ Andaman_and_Nicobar_Islands @map("Andaman and Nicobar Islands")
+ Chandigarh @map("Chandigarh")
+ Dadra_and_Nagar_Haveli_and_Daman_and_Diu @map("Dadra and Nagar Haveli and Daman and Diu")
+ Delhi @map("Delhi")
+ Jammu_and_Kashmir @map("Jammu and Kashmir")
+ Ladakh @map("Ladakh")
+ Lakshadweep @map("Lakshadweep")
+ Puducherry @map("Puducherry")
+}

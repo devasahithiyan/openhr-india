@@ -158,3 +158,9 @@ vite.config.ts.timestamp-*
 
 # Local AI-agent handoff notes (not published)
 HANDOFF.md
+
+# Foundation tooling and local test output
+apps/web/next-env.d.ts
+playwright-report/
+test-results/
+.pgdata/

@@ -1,0 +1,9 @@
+node_modules
+**/dist
+**/.next
+**/next-env.d.ts
+**/pnpm-lock.yaml
+prototype
+**/migrations
+test-results
+playwright-report
