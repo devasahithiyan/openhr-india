@@ -24,13 +24,13 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 - **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
 - **Private identifiers protected:** PAN, bank account, UAN, ESIC and IFSC are encrypted and shown masked. Only Aadhaar's last four digits are stored.
 
-| Part | Stack | Folder |
-| --- | --- | --- |
-| Web app | Next.js, Tailwind CSS | [`apps/web`](apps/web) |
-| API | NestJS, Prisma, PostgreSQL | [`apps/api`](apps/api) |
-| Shared types and validation | Zod | [`packages/shared`](packages/shared) |
-| Statutory rules (coming) | Versioned rule data | [`packages/compliance`](packages/compliance) |
-| Clickable demo | Vite, React | [`prototype`](prototype) |
+| Part                        | Stack                      | Folder                                       |
+| --------------------------- | -------------------------- | -------------------------------------------- |
+| Web app                     | Next.js, Tailwind CSS      | [`apps/web`](apps/web)                       |
+| API                         | NestJS, Prisma, PostgreSQL | [`apps/api`](apps/api)                       |
+| Shared types and validation | Zod                        | [`packages/shared`](packages/shared)         |
+| Statutory rules (coming)    | Versioned rule data        | [`packages/compliance`](packages/compliance) |
+| Clickable demo              | Vite, React                | [`prototype`](prototype)                     |
 
 Why this stack: [ADR 0001](docs/adr/0001-tech-stack.md). API reference: [docs/API.md](docs/API.md).
 
@@ -48,16 +48,16 @@ Most open-source HR tools are designed for the US or Europe. Indian companies ne
 
 ## Planned modules
 
-| Module | Highlights |
-| --- | --- |
-| **Core HR** | Employee master, org chart, departments, documents (PAN, Aadhaar-masked, bank details) |
-| **Onboarding / Offboarding** | Offer letters, checklists, F&F settlement, relieving & experience letters |
-| **Attendance & Leave** | Shifts, regularisation, state-wise holiday lists, configurable leave policies |
-| **Payroll** | Salary structures, arrears, LOP, payslips, bank transfer files |
-| **Statutory Compliance** | PF, ESI, PT, LWF, TDS, Form 16, ECR & challan generation |
-| **Expenses & Reimbursements** | Claims, approvals, flexible benefit plans |
-| **Employee Self-Service** | Payslips, tax declarations, leave, profile — mobile-friendly |
-| **Reports** | Headcount, attrition, payroll registers, compliance reports |
+| Module                        | Highlights                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| **Core HR**                   | Employee master, org chart, departments, documents (PAN, Aadhaar-masked, bank details) |
+| **Onboarding / Offboarding**  | Offer letters, checklists, F&F settlement, relieving & experience letters              |
+| **Attendance & Leave**        | Shifts, regularisation, state-wise holiday lists, configurable leave policies          |
+| **Payroll**                   | Salary structures, arrears, LOP, payslips, bank transfer files                         |
+| **Statutory Compliance**      | PF, ESI, PT, LWF, TDS, Form 16, ECR & challan generation                               |
+| **Expenses & Reimbursements** | Claims, approvals, flexible benefit plans                                              |
+| **Employee Self-Service**     | Payslips, tax declarations, leave, profile — mobile-friendly                           |
+| **Reports**                   | Headcount, attrition, payroll registers, compliance reports                            |
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for phasing.
 
