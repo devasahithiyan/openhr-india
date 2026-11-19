@@ -1,0 +1,14 @@
+{
+  "version": "TN-FY2024-25-employee-epf-v1",
+  "state": "Tamil_Nadu",
+  "from": "2024-04",
+  "through": "2025-03",
+  "basisPoints": 1200,
+  "ceilingPaise": 1500000,
+  "roundingPaise": 100,
+  "sources": [
+    "https://www.epfindia.gov.in/site_docs/PDFs/PQ_PDFs/PQ_BudgetSession1_2022_LS_English.pdf",
+    "https://pmvbry-cdn.epfindia.gov.in/wp-content/uploads/2025/08/Annual_Report_2023-24.pdf",
+    "https://eproceedings.epfindia.gov.in/uploads/judgement/243510000462024-1.pdf"
+  ]
+}

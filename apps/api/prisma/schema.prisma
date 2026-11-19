@@ -31,6 +31,8 @@ model User {
  @@map("users")
 }
 model Membership {
+ published PayrollRun[]
+ reviews PayrollReview[]
  leaveDecisions LeaveRequest[]
  correctionsDecided Correction[]
  id String @id @default(uuid()) @db.Uuid
@@ -92,6 +94,9 @@ model Designation {
  @@map("designations")
 }
 model Employee {
+ salaries Salary[]
+ payrollReviews PayrollReview[]
+ slips Payslip[]
  leave LeaveRequest[]
  attendance Attendance[]
  corrections Correction[]
@@ -178,6 +183,7 @@ enum RequestStatus {
  Withdrawn
 }
 model LeaveType {
+ unpaid Boolean @default(false)
  id String @id @default(uuid()) @db.Uuid
  companyId String @map("company_id") @db.Uuid
  name String
@@ -240,4 +246,42 @@ model Correction {
  decision Membership? @relation(fields:[companyId,decidedBy],references:[companyId,id])
  employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
  @@index([companyId,employeeId,day])
+}
+
+model Salary {
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ effective String
+ components Json
+ employee Employee @relation(fields:[companyId,employeeId], references:[companyId,id])
+ @@id([companyId,employeeId,effective])
+}
+model PayrollReview {
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ month String
+ inputHash String
+ deductions Json
+ reviewerId String @db.Uuid
+ reviewer Membership @relation(fields:[companyId,reviewerId],references:[companyId,id])
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ @@id([companyId,month,employeeId])
+}
+model PayrollRun {
+ companyId String @map("company_id") @db.Uuid
+ month String
+ approverId String @db.Uuid
+ publishedAt DateTime @default(now())
+ approver Membership @relation(fields:[companyId,approverId],references:[companyId,id])
+ slips Payslip[]
+ @@id([companyId,month])
+}
+model Payslip {
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ month String
+ snapshot Json
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ run PayrollRun @relation(fields:[companyId,month],references:[companyId,month])
+ @@id([companyId,month,employeeId])
 }

@@ -176,7 +176,120 @@ async function seed() {
     },
     update: {},
   });
+  await seedPayrollPilot();
   console.log("Demo seed ready. See README for fictional login credentials.");
+}
+async function seedPayrollPilot() {
+  const slug = "payroll-demo",
+    name = "Fictional Payroll Pilot",
+    password = "Demo-only-1234";
+  const company = await provision(
+    slug,
+    name,
+    "admin@example.test",
+    password,
+    "Admin",
+  );
+  const companyId = company.id;
+  const branch = await db.branch.upsert({
+    where: { companyId_name: { companyId, name: "Demo Chennai" } },
+    update: {},
+    create: { companyId, name: "Demo Chennai", state: "Tamil_Nadu" },
+  });
+  const department = await db.department.upsert({
+    where: { companyId_name: { companyId, name: "Demo Team" } },
+    update: {},
+    create: { companyId, name: "Demo Team" },
+  });
+  const designation = await db.designation.upsert({
+    where: { companyId_name: { companyId, name: "Demo Role" } },
+    update: {},
+    create: { companyId, name: "Demo Role" },
+  });
+  for (const [code, label, joined] of [
+    ["P001", "Demo Full Month", "2024-04-01"],
+    ["P002", "Demo March Joiner", "2025-03-16"],
+    ["P003", "Demo Unpaid Leave", "2024-04-01"],
+  ] as const) {
+    const employee = await db.employee.upsert({
+      where: { companyId_code: { companyId, code } },
+      update: {},
+      create: {
+        companyId,
+        code,
+        name: label,
+        dateOfJoining: new Date(joined),
+        branchId: branch.id,
+        departmentId: department.id,
+        designationId: designation.id,
+      },
+    });
+    await db.salary.upsert({
+      where: {
+        companyId_employeeId_effective: {
+          companyId,
+          employeeId: employee.id,
+          effective: joined,
+        },
+      },
+      update: {},
+      create: {
+        companyId,
+        employeeId: employee.id,
+        effective: joined,
+        components: [{ name: "Basic", monthly: 3100000, pfWage: true }],
+      },
+    });
+    if (code === "P003") {
+      const type = await db.leaveType.upsert({
+        where: {
+          companyId_year_name: {
+            companyId,
+            year: 2025,
+            name: "Demo unpaid leave",
+          },
+        },
+        update: {},
+        create: {
+          companyId,
+          year: 2025,
+          name: "Demo unpaid leave",
+          unpaid: true,
+          openingDays: 5,
+        },
+      });
+      const id = "0a69935f-1967-4518-82d8-aed8789f0955";
+      const approver = await db.membership.findFirstOrThrow({
+        where: { companyId, role: "Admin" },
+      });
+      await db.leaveRequest.upsert({
+        where: { id },
+        update: {},
+        create: {
+          id,
+          companyId,
+          employeeId: employee.id,
+          typeId: type.id,
+          start: "2025-03-10",
+          end: "2025-03-10",
+          days: ["2025-03-10"],
+          reason: "Fictional pilot example",
+          status: "Approved",
+          decidedBy: approver.id,
+          decidedAt: new Date("2025-03-05"),
+        },
+      });
+    }
+  }
+  await provision(slug, name, "hr@example.test", password, "HR");
+  await provision(
+    slug,
+    name,
+    "employee@example.test",
+    password,
+    "Employee",
+    "P003",
+  );
 }
 async function main() {
   const [command, slug, name, email, role = "Admin", employeeCode] =

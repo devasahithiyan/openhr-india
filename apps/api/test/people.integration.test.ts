@@ -1,3 +1,4 @@
+import type { PayRow, PayrollView } from "@openhr/shared";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import request from "supertest";
 import type { INestApplication } from "@nestjs/common";
@@ -186,6 +187,10 @@ afterAll(async () => {
     const memberships = await db.membership.findMany({
       where: { companyId: { in: [companyId, otherCompanyId] } },
     });
+    await db.payslip.deleteMany({ where: { companyId } });
+    await db.payrollRun.deleteMany({ where: { companyId } });
+    await db.payrollReview.deleteMany({ where: { companyId } });
+    await db.salary.deleteMany({ where: { companyId } });
     await db.correction.deleteMany({ where: { companyId } });
     await db.attendance.deleteMany({ where: { companyId } });
     await db.leaveRequest.deleteMany({ where: { companyId } });
@@ -536,6 +541,159 @@ describe("real database Auth + People API", () => {
         await db.attendance.findFirstOrThrow({ where: filter })
       ).checkOut?.toISOString(),
     ).toBe("2026-04-02T12:00:00.000Z");
+  });
+  it("closes and reconciles a reviewed pilot month exactly once, with isolated immutable payslips", async () => {
+    const month = "2025-03";
+    const employeeSession = await login(
+      undefined,
+      `employee-${suffix}@example.test`,
+    );
+    const other = await login(`other-${suffix}`);
+    const read = async (c = cookie, m = month): Promise<PayrollView> => {
+      const res = await request(app.getHttpServer())
+        .get("/api/payroll")
+        .query({ month: m })
+        .set("Cookie", c)
+        .expect(200);
+      return res.body;
+    };
+    const command = (body: object) => write("/api/payroll", body);
+    const salary = (
+      employeeId: string,
+      effective: string,
+      monthly = 3100000,
+    ) => ({
+      action: "salary",
+      employeeId,
+      effective,
+      components: [{ name: "Basic", monthly, pfWage: true }],
+    });
+    const publish = (hash: string) =>
+      command({ action: "publish", month, hash });
+    await db.employee.updateMany({
+      where: { companyId },
+      data: { dateOfJoining: new Date("2025-03-01") },
+    });
+    await db.employee.update({
+      where: { id: managerId },
+      data: { dateOfJoining: new Date("2025-03-16") },
+    });
+    const initial = await read();
+    expect(initial.rows).toHaveLength(3);
+    expect(
+      initial.rows.every((r) =>
+        r.issues.some((i) => i.includes("compensation")),
+      ),
+    ).toBe(true);
+    expect((await publish(initial.hash)).status).toBe(409);
+    expect((await read(cookies(employeeSession))).rows).toEqual([]);
+    expect((await read(cookies(other))).rows).toEqual([]);
+    const denied = (signed: request.Response, body: object) =>
+      request(app.getHttpServer())
+        .post("/api/payroll")
+        .set("Origin", origin)
+        .set("Cookie", cookies(signed))
+        .set("x-csrf-token", signed.body.csrfToken)
+        .send(body);
+    expect(
+      (await denied(employeeSession, salary(employeeId, "2025-03-01"))).status,
+    ).toBe(403);
+    expect((await denied(other, salary(employeeId, "2025-03-01"))).status).toBe(
+      400,
+    );
+    for (const row of initial.rows)
+      expect((await command(salary(row.employeeId, row.joined))).status).toBe(
+        201,
+      );
+    const type = await db.leaveType.create({
+      data: {
+        companyId,
+        year: 2025,
+        name: "Fictional unpaid",
+        openingDays: 5,
+        unpaid: true,
+      },
+    });
+    const leave = await db.leaveRequest.create({
+      data: {
+        companyId,
+        employeeId,
+        typeId: type.id,
+        start: "2025-03-10",
+        end: "2025-03-10",
+        days: ["2025-03-10"],
+        reason: "Fictional example",
+      },
+    });
+    expect(
+      (await read()).rows.find((r) => r.employeeId === employeeId)?.issues,
+    ).toContain("Resolve pending leave");
+    await db.leaveRequest.update({
+      where: { id: leave.id },
+      data: { status: "Approved", decidedBy: adminMemberId },
+    });
+    const ready = await read();
+    expect(ready.gross).toBe(7700000);
+    expect(ready.net).toBeNull();
+    expect(ready.rows.find((r) => r.employeeId === employeeId)).toMatchObject({
+      unpaid: ["2025-03-10"],
+      payableDays: 30,
+      gross: 3000000,
+    });
+    expect((await read(cookie, "2025-04")).rows[0]).toMatchObject({
+      rule: null,
+      pf: null,
+    });
+    const review = (r: PayRow) =>
+      command({
+        action: "review",
+        month,
+        employeeId: r.employeeId,
+        hash: r.hash,
+        assessment: {
+          esi: 0,
+          pt: 2000,
+          lwf: 0,
+          tds: 0,
+          reference: "Demo worksheet",
+          standardCappedPF: true,
+        },
+      });
+    for (const r of ready.rows) expect((await review(r)).status).toBe(201);
+    const reviewed = await read();
+    expect(reviewed.net).toBe(7154000);
+    await command(salary(outsiderId, "2025-03-31", 6200000));
+    expect((await publish(reviewed.hash)).status).toBe(409);
+    const updated = await read();
+    const changed = updated.rows.find((r) => r.employeeId === outsiderId)!;
+    expect(changed.assessment).toBeNull();
+    expect((await review(changed)).status).toBe(201);
+    const final = await read();
+    const simultaneous = await Promise.all([
+      publish(final.hash),
+      publish(final.hash),
+    ]);
+    expect(simultaneous.map((r) => r.status)).toEqual([201, 201]);
+    const locked = await read();
+    expect(locked.published).toBe(true);
+    expect(locked.net).toBe(locked.rows.reduce((n, r) => n + r.net!, 0));
+    expect((await publish(final.hash)).status).toBe(201);
+    expect(await db.payslip.count({ where: { companyId, month } })).toBe(3);
+    await command(salary(employeeId, "2025-03-01", 8000000));
+    await db.attendance.create({
+      data: {
+        companyId,
+        employeeId,
+        day: "2025-03-03",
+        checkIn: new Date("2025-03-03T05:00:00Z"),
+        checkOut: new Date("2025-03-03T12:00:00Z"),
+      },
+    });
+    expect(await read()).toEqual(locked);
+    expect(
+      (await read(cookies(employeeSession))).rows.map((r) => r.employeeId),
+    ).toEqual([employeeId]);
+    expect((await read(cookies(other))).rows).toEqual([]);
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);

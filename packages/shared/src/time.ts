@@ -12,6 +12,7 @@ const id = z.string().uuid(),
 export const timeCommand = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("type"),
+    unpaid: z.boolean().optional(),
     name,
     openingDays: z.number().int().min(0).max(366),
     year: z.number().int().min(2000).max(2200),
@@ -88,6 +89,7 @@ export interface TimeView {
     id: string;
     name: string;
     year: number;
+    unpaid?: boolean;
     openingDays: number;
     used: number;
     pending: number;

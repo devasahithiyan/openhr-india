@@ -121,6 +121,7 @@ export class TimeController {
           name: t.name,
           year: t.year,
           openingDays: t.openingDays,
+          unpaid: t.unpaid,
           used: count("Approved"),
           pending: count("Pending"),
         };
@@ -184,6 +185,7 @@ export class TimeController {
                 name: c.name,
                 year: c.year,
                 openingDays: c.openingDays,
+                unpaid: c.unpaid ?? false,
               },
             });
             return;
