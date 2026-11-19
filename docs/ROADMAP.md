@@ -30,6 +30,6 @@ A rough phasing plan. Open an issue to discuss changes.
 
 ## Phase 4 — Beyond
 - [ ] Onboarding/offboarding, F&F settlement, gratuity
-- [ ] Expenses and reimbursements
+- [x] Itemized expense claims, review, resubmission and reimbursement tracking
 - [ ] Reports and analytics
 - [ ] Indian language support, mobile app, integrations

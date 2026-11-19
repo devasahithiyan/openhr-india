@@ -25,6 +25,7 @@ The real application (run it yourself with [Getting started](#getting-started)) 
 - **Org chart:** search by name or employee code, filter by department, expand or collapse teams and open employee profiles from the workspace navigation. Admin and HR see the company, managers see themselves and their direct reports, and employees see their own record.
 - **People:** branches (with state), departments, designations and the employee master. Admin and HR manage records, managers see their direct reports, employees see themselves.
 - **Leave and attendance:** configurable annual leave, branch holidays and workweeks, team calendar, daily punches and reviewed corrections.
+- **Expenses:** employees submit itemized INR claims, reporting managers approve or return them, and HR records reimbursement. Both sides can follow the status history. Try the fictional ₹850 client visit under Expenses in either demo view.
 - **Private identifiers protected:** PAN, bank account, UAN, ESIC and IFSC are encrypted and shown masked. Only Aadhaar's last four digits are stored.
 
 | Part                        | Stack                      | Folder                                       |

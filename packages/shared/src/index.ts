@@ -196,3 +196,4 @@ export interface OrganizationMember {
   department: { name: string };
 }
 export * from "./payroll";
+export * from "./expenses";

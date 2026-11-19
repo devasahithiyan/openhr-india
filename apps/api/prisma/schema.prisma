@@ -31,6 +31,7 @@ model User {
  @@map("users")
 }
 model Membership {
+ expenseEvents ExpenseEvent[]
  published PayrollRun[]
  reviews PayrollReview[]
  leaveDecisions LeaveRequest[]
@@ -94,6 +95,7 @@ model Designation {
  @@map("designations")
 }
 model Employee {
+ claims ExpenseClaim[]
  salaries Salary[]
  payrollReviews PayrollReview[]
  slips Payslip[]
@@ -284,4 +286,38 @@ model Payslip {
  employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
  run PayrollRun @relation(fields:[companyId,month],references:[companyId,month])
  @@id([companyId,month,employeeId])
+}
+
+enum ExpenseStatus {
+ Submitted
+ Returned
+ Approved
+ Reimbursed
+}
+model ExpenseClaim {
+ id String @id @default(uuid()) @db.Uuid
+ companyId String @map("company_id") @db.Uuid
+ employeeId String @db.Uuid
+ employee Employee @relation(fields:[companyId,employeeId],references:[companyId,id])
+ items Json
+ status ExpenseStatus @default(Submitted)
+ revision Int @default(1)
+ paymentDay String?
+ paymentReference String?
+ createdAt DateTime @default(now())
+ events ExpenseEvent[]
+ @@unique([companyId,id])
+ @@index([companyId,employeeId])
+}
+model ExpenseEvent {
+ companyId String @map("company_id") @db.Uuid
+ claimId String @db.Uuid
+ revision Int
+ status ExpenseStatus
+ at DateTime @default(now())
+ actorId String @db.Uuid
+ note String?
+ actor Membership @relation(fields:[companyId,actorId],references:[companyId,id])
+ claim ExpenseClaim @relation(fields:[companyId,claimId],references:[companyId,id])
+ @@id([companyId,claimId,revision])
 }
