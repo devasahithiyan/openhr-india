@@ -9,15 +9,18 @@ import {
   type Viewer,
 } from "../onboarding/model";
 import { useDemo } from "../lib/store";
+import { DEMO_MANAGERS, DEMO_NEW_HIRE, FIRST_WEEK_SCHEDULE, handbookUrl } from "../onboarding/seed";
 export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
   const { onboarding, saveOnboarding } = useDemo(),
-    [manager, setManager] = useState(false),
+    [as, setAs] = useState("hr"),
     [error, setError] = useState("");
+  const manager = admin && as !== "hr";
   const viewer: Viewer = admin
     ? manager
-      ? { role: "Manager", employeeId: "manager" }
+      ? { role: "Manager", employeeId: as }
       : { role: "HR", employeeId: null }
-    : { role: "Employee", employeeId: "designer" };
+    : { role: "Employee", employeeId: DEMO_NEW_HIRE };
+  const newHire = onboarding.people.find((p) => p.id === DEMO_NEW_HIRE);
   const visible = {
     ...onboarding,
     contacts: onboarding.people,
@@ -68,12 +71,11 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
                   closedAt: null,
                   buddyId: null,
                   week: {
-                    schedule:
-                      "09:30 · Meet the design team in the Chennai studio.\n11:00 · Product orientation.",
-                    welcomeUrl: location.origin + "/welcome.html",
-                    policyTitle: "Studio handbook",
+                    schedule: FIRST_WEEK_SCHEDULE[p.branchId] ?? "",
+                    welcomeUrl: handbookUrl(),
+                    policyTitle: "Kaveri Textiles employee handbook",
                     policyVersion: "2026.1",
-                    policyUrl: location.origin + "/welcome.html",
+                    policyUrl: handbookUrl(),
                     acknowledgements: [],
                     blockers: [],
                   },
@@ -114,16 +116,24 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-4">
-        {!admin && <strong>New hire · Demo Chennai Designer</strong>}
+        {!admin && newHire && (
+          <p>
+            <strong>Previewing as new joiner {newHire.name}</strong>, Junior Textile Designer at Coimbatore, joining 23 Nov 2026.
+          </p>
+        )}
         {admin && (
           <label>
             Demo role
             <select
-              value={manager ? "manager" : "hr"}
-              onChange={(e) => setManager(e.target.value === "manager")}
+              value={as}
+              onChange={(e) => setAs(e.target.value)}
             >
               <option value="hr">HR</option>
-              <option value="manager">Reporting manager</option>
+              {DEMO_MANAGERS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  Reporting manager · {m.label}
+                </option>
+              ))}
             </select>
           </label>
         )}
@@ -131,7 +141,7 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
           className="text-indigo underline"
           to={admin ? "/me/onboarding" : "/admin/onboarding"}
         >
-          {admin ? "Open new hire demo" : "Open HR demo"}
+          {admin ? "Preview as the new joiner" : "Open the HR view"}
         </Link>
       </div>
       {error && <p role="alert">{error}</p>}
@@ -139,7 +149,7 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
         viewer={viewer}
         data={visible}
         send={send}
-        initialEmployee="designer"
+        initialEmployee={admin ? "n2" : DEMO_NEW_HIRE}
       />
     </div>
   );

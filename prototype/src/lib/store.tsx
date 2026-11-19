@@ -67,7 +67,8 @@ interface DemoStore extends DemoState {
 }
 
 // v3 replaces the payroll stages with review-and-publish; older saved state is ignored.
-const KEY = "openhr-demo-v3";
+// v4: onboarding now uses Kaveri Textiles staff; older saved state is ignored.
+const KEY = "openhr-demo-v4";
 const me = EMPLOYEES.find((e) => e.id === DEMO_EMPLOYEE_ID)!;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
