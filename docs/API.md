@@ -49,3 +49,7 @@ All requests use the existing session and company scope. Writes require Origin a
 ### Onboarding plans
 
 GET /api/onboarding returns company plans for HR/Admin, self and direct reports for managers, and the employee’s own plan for employees. POST accepts template, start, complete and reschedule. Plan mutations carry the revision the actor last saw. Rescheduling updates the employee’s joining date and only unfinished task deadlines in one transaction.
+
+The first-week workspace adds setup (schedule, buddy, welcome and versioned policy links), acknowledge, block and resolve. Only a new hire can acknowledge their current policy or raise a blocker. HR records the resolution. The contacts list contains only managers and buddies associated with visible plans.
+
+HR uses handover or exempt to record equipment disposition. Close requires a final note, finished tasks, resolved blockers, acknowledgement of the configured policy and an equipment decision. Closed plans are read-only. Office equipment records describe handover to the plan’s employee, with an asset reference, actor and timestamp.

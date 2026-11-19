@@ -21,6 +21,7 @@ import {
   onboardCommand,
   revisePlan,
   type FirstWeek,
+  type Readiness,
   type ChecklistTask,
   type OnboardingData,
   type Plan,
@@ -58,11 +59,13 @@ function presentPlan(p: {
   closedAt: Date | null;
   tasks: Prisma.JsonValue;
   week: Prisma.JsonValue;
+  readiness: Prisma.JsonValue;
 }): Plan {
   return {
     employeeId: p.employeeId,
     templateId: p.templateId,
     buddyId: p.buddyId,
+    readiness: (p.readiness as unknown as Readiness) ?? undefined,
     week: (p.week as unknown as FirstWeek) ?? undefined,
     startedFor: p.startedFor,
     revision: p.revision,
@@ -161,9 +164,16 @@ export class OnboardingRepository {
     const c = onboardCommand.parse(body),
       companyId = a.companyId;
     if (
-      ["template", "start", "reschedule", "setup", "resolve"].includes(
-        c.action,
-      ) &&
+      [
+        "template",
+        "start",
+        "reschedule",
+        "setup",
+        "resolve",
+        "handover",
+        "exempt",
+        "close",
+      ].includes(c.action) &&
       !isHR(a)
     )
       throw new ForbiddenException("HR access required");
@@ -239,6 +249,8 @@ export class OnboardingRepository {
               tasks: next.tasks,
               buddyId: next.buddyId,
               week: next.week,
+              readiness: next.readiness,
+              closedAt: next.closedAt ? new Date(next.closedAt) : null,
               startedFor: next.startedFor,
               revision: next.revision,
             },

@@ -29,7 +29,8 @@ A rough phasing plan. Open an issue to discuss changes.
 - [ ] ECR, challans and bank transfer files
 
 ## Phase 4 — Beyond
-- [ ] Onboarding/offboarding, F&F settlement, gratuity
+- [x] Onboarding templates, first-week workspace, equipment and readiness review
+- [ ] Offboarding, F&F settlement, gratuity
 - [x] Itemized expense claims, review, resubmission and reimbursement tracking
 - [ ] Reports and analytics
 - [ ] Indian language support, mobile app, integrations

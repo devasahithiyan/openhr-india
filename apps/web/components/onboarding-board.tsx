@@ -3,6 +3,9 @@ import { useState, type FormEvent } from "react";
 import {
   isHR,
   emptyWeek,
+  emptyReadiness,
+  outstanding,
+  weekBeginning,
   acknowledged,
   ownsTask,
   matchesTemplate,
@@ -445,6 +448,222 @@ function FirstWeekView({
   );
 }
 
+function Dashboard({ data }: { data: OnboardingData }) {
+  const [group, setGroup] = useState("week"),
+    [filter, setFilter] = useState("open");
+  const groups = new Map<string, Plan[]>();
+  for (const plan of data.plans) {
+    const p = data.people.find((p) => p.id === plan.employeeId)!;
+    if (
+      (filter === "open" && plan.closedAt) ||
+      (filter === "closed" && !plan.closedAt)
+    )
+      continue;
+    const branch =
+        data.branches.find((b) => b.id === p.branchId)?.name ?? "Branch",
+      week = weekBeginning(p.joined);
+    const label =
+      group === "week"
+        ? "Week of " + week + " · " + branch
+        : branch + " · Week of " + week;
+    const list = groups.get(label) ?? [];
+    list.push(plan);
+    groups.set(label, list);
+  }
+  return (
+    <section className="panel space-y-3">
+      <h2 className="text-xl font-bold">Readiness dashboard</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label>
+          Group by
+          <select value={group} onChange={(e) => setGroup(e.target.value)}>
+            <option value="week">Joining week, then branch</option>
+            <option value="branch">Branch, then joining week</option>
+          </select>
+        </label>
+        <label>
+          Plan status
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+            <option value="all">All</option>
+          </select>
+        </label>
+      </div>
+      {!groups.size && <p>No matching plans.</p>}
+      {[...groups.keys()].sort().map((key) => (
+        <section key={key}>
+          <h3 className="font-bold">{key}</h3>
+          <ul>
+            {groups.get(key)!.map((plan) => {
+              const p = data.people.find((e) => e.id === plan.employeeId)!,
+                overdue = plan.tasks.filter(
+                  (t) => !t.done && t.due < data.today,
+                ),
+                blockers = plan.week?.blockers.filter((b) => !b.resolved) ?? [],
+                todo = outstanding(plan, p);
+              return (
+                <li className="border-b border-line py-2" key={p.id}>
+                  <a
+                    className="font-semibold underline"
+                    href={"#joiner-" + p.id}
+                  >
+                    {p.name}
+                  </a>{" "}
+                  ·{" "}
+                  {plan.closedAt
+                    ? "Closed"
+                    : todo.length
+                      ? todo.length + " outstanding"
+                      : "Ready for final review"}
+                  {overdue.map((t, i) => (
+                    <p key={i}>
+                      Overdue · {t.title} · {t.owner} · {t.due}
+                    </p>
+                  ))}
+                  {blockers.map((b) => (
+                    <p key={b.id}>Blocked · {b.note} · HR</p>
+                  ))}
+                  {!plan.closedAt && (
+                    <details>
+                      <summary>Outstanding work and owners</summary>
+                      {todo.length ? (
+                        <ul>
+                          {todo.map((s, i) => (
+                            <li key={i}>{s}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>All checks complete.</p>
+                      )}
+                    </details>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </section>
+  );
+}
+function FinalReview({
+  plan,
+  p,
+  hr,
+  send,
+}: {
+  plan: Plan;
+  p: DirectoryPerson;
+  hr: boolean;
+  send: Send;
+}) {
+  const ready = plan.readiness ?? emptyReadiness(),
+    target = { employeeId: p.id, revision: plan.revision },
+    todo = outstanding(plan, p);
+  return (
+    <section className="space-y-3 border-t border-line pt-3">
+      <h3 className="font-bold">Equipment handover</h3>
+      {ready.equipment.map((i) => (
+        <p key={i.asset}>
+          {i.item} · {i.asset} · Handed to {p.name} on {i.at.slice(0, 10)}
+        </p>
+      ))}
+      {ready.exemption && (
+        <p>No equipment required · {ready.exemption.reason}</p>
+      )}
+      {hr && !plan.closedAt && (
+        <details>
+          <summary>Record equipment decision</summary>
+          <form
+            className="grid gap-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.currentTarget,
+                f = new FormData(form);
+              if (
+                await send({
+                  action: "handover",
+                  ...target,
+                  item: String(f.get("item")),
+                  asset: String(f.get("asset")),
+                })
+              )
+                form.reset();
+            }}
+          >
+            <label>
+              Equipment item
+              <input name="item" required maxLength={160} />
+            </label>
+            <label>
+              Asset reference
+              <input name="asset" required maxLength={100} />
+            </label>
+            <button>Record handover</button>
+          </form>
+          {!ready.equipment.length && (
+            <form
+              className="mt-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send({
+                  action: "exempt",
+                  ...target,
+                  reason: String(new FormData(e.currentTarget).get("reason")),
+                });
+              }}
+            >
+              <label>
+                Reason no equipment is required
+                <input name="reason" required maxLength={500} />
+              </label>
+              <button className="secondary">Record exemption</button>
+            </form>
+          )}
+        </details>
+      )}
+      {ready.review ? (
+        <p>
+          <strong>Onboarding closed</strong> · {ready.review.at.slice(0, 10)} ·{" "}
+          {ready.review.note}
+        </p>
+      ) : (
+        hr && (
+          <details>
+            <summary>Final review</summary>
+            {todo.length ? (
+              <ul>
+                {todo.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>Ready to close.</p>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send({
+                  action: "close",
+                  ...target,
+                  note: String(new FormData(e.currentTarget).get("note")),
+                });
+              }}
+            >
+              <label>
+                Final review note
+                <input name="note" required maxLength={500} />
+              </label>
+              <button disabled={todo.length > 0}>Close onboarding</button>
+            </form>
+          </details>
+        )
+      )}
+    </section>
+  );
+}
+
 export function OnboardingBoard({
   data,
   viewer,
@@ -464,6 +683,7 @@ export function OnboardingBoard({
       </h1>
       {hr && (
         <>
+          <Dashboard data={data} />
           <Templates data={data} send={send} />
           <Start data={data} send={send} initialEmployee={initialEmployee} />
         </>
@@ -493,7 +713,7 @@ export function OnboardingBoard({
       {data.plans.map((plan) => {
         const p = data.people.find((p) => p.id === plan.employeeId)!;
         return (
-          <article className="panel space-y-3" key={p.id}>
+          <article className="panel space-y-3" id={"joiner-" + p.id} key={p.id}>
             <h2 className="text-xl font-bold">{p.name}</h2>
             <p>
               {data.templates.find((t) => t.id === plan.templateId)?.name} ·
@@ -526,6 +746,7 @@ export function OnboardingBoard({
                 </li>
               ))}
             </ul>
+            <FinalReview plan={plan} p={p} hr={hr} send={send} />
             <FirstWeekView
               data={data}
               p={p}

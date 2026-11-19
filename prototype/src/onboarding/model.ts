@@ -24,6 +24,7 @@ export type PlanTemplate = {
 };
 export type Plan = {
   week?: FirstWeek;
+  readiness?: Readiness;
   employeeId: string;
   templateId: string;
   startedFor: string;
@@ -54,6 +55,9 @@ export type OnboardingAction =
     }
   | { action: "start"; employeeId: string; templateId: string }
   | ({ action: "reschedule"; day: string; previousJoining: string } & Target)
+  | ({ action: "handover"; item: string; asset: string } & Target)
+  | ({ action: "exempt"; reason: string } & Target)
+  | ({ action: "close"; note: string } & Target)
   | ({ action: "setup"; buddyId: string | null; setup: WeekSetup } & Target)
   | ({ action: "acknowledge" } & Target)
   | ({ action: "block"; note: string } & Target)
@@ -112,6 +116,65 @@ export function revisePlan(
   }
   const week = plan.week ?? emptyWeek();
   const next = { ...plan, revision: plan.revision + 1 };
+  if (
+    cmd.action === "handover" ||
+    cmd.action === "exempt" ||
+    cmd.action === "close"
+  ) {
+    if (!isHR(viewer)) throw new Error("HR access required.");
+    const ready = plan.readiness ?? emptyReadiness();
+    if (cmd.action === "handover") {
+      if (
+        !cmd.item.trim() ||
+        !cmd.asset.trim() ||
+        ready.equipment.some(
+          (i) => i.asset.toLowerCase() === cmd.asset.trim().toLowerCase(),
+        )
+      )
+        throw new Error("Enter an item and a distinct asset reference.");
+      return {
+        ...next,
+        readiness: {
+          ...ready,
+          exemption: null,
+          equipment: [
+            ...ready.equipment,
+            {
+              item: cmd.item.trim(),
+              asset: cmd.asset.trim(),
+              by: actor,
+              at: now,
+            },
+          ],
+        },
+      };
+    }
+    if (cmd.action === "exempt") {
+      if (!cmd.reason.trim() || ready.equipment.length)
+        throw new Error(
+          "Record why equipment is unnecessary before a handover.",
+        );
+      return {
+        ...next,
+        readiness: {
+          ...ready,
+          exemption: { reason: cmd.reason.trim(), by: actor, at: now },
+        },
+      };
+    }
+    if (outstanding(plan, person).length || !cmd.note.trim())
+      throw new Error(
+        "Resolve all outstanding items and record the final review before closing.",
+      );
+    return {
+      ...next,
+      closedAt: now,
+      readiness: {
+        ...ready,
+        review: { note: cmd.note.trim(), by: actor, at: now },
+      },
+    };
+  }
   if (cmd.action === "setup") {
     if (!isHR(viewer) || cmd.buddyId === person.id)
       throw new Error("HR must choose a buddy other than the new hire.");
@@ -269,4 +332,34 @@ export function safeResource(url: string) {
   } catch {
     return false;
   }
+}
+
+export type Handover = { item: string; asset: string; by: string; at: string };
+export type Readiness = {
+  equipment: Handover[];
+  exemption: { reason: string; by: string; at: string } | null;
+  review: { note: string; by: string; at: string } | null;
+};
+export const emptyReadiness = (): Readiness => ({
+  equipment: [],
+  exemption: null,
+  review: null,
+});
+export function outstanding(plan: Plan, person: DirectoryPerson) {
+  const week = plan.week ?? emptyWeek(),
+    ready = plan.readiness ?? emptyReadiness(),
+    items: string[] = [];
+  for (const t of plan.tasks)
+    if (!t.done) items.push(t.title + " · " + t.owner);
+  for (const b of week.blockers) if (!b.resolved) items.push(b.note + " · HR");
+  if (week.policyUrl && !acknowledged(week))
+    items.push("Policy acknowledgement · Employee");
+  if (!ready.equipment.length && !ready.exemption)
+    items.push("Equipment review · HR");
+  if (plan.startedFor !== person.joined)
+    items.push("Review changed joining date · HR");
+  return items;
+}
+export function weekBeginning(day: string) {
+  return shiftDay(day, -((new Date(day + "T00:00:00Z").getUTCDay() + 6) % 7));
 }

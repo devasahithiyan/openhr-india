@@ -12,6 +12,22 @@ export const onboardCommand: z.ZodType<OnboardingAction> = z.discriminatedUnion(
   "action",
   [
     z.object({
+      action: z.literal("handover"),
+      ...target,
+      item: text,
+      asset: z.string().trim().min(1).max(100),
+    }),
+    z.object({
+      action: z.literal("exempt"),
+      ...target,
+      reason: z.string().trim().min(1).max(500),
+    }),
+    z.object({
+      action: z.literal("close"),
+      ...target,
+      note: z.string().trim().min(1).max(500),
+    }),
+    z.object({
       action: z.literal("template"),
       name: text,
       branchId: id.nullable(),

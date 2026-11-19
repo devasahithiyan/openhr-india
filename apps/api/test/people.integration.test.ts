@@ -915,6 +915,34 @@ describe("real database Auth + People API", () => {
     await as(employee, resolve).expect(403);
     expect((await post(resolve)).status).toBe(201);
     expect((await getPlan()).week!.blockers[0]!.resolvedBy).toBe(adminMemberId);
+    const close = {
+      action: "close",
+      employeeId,
+      revision: 7,
+      note: "Ready for first week",
+    };
+    expect((await post(close)).status).toBe(409);
+    const handover = {
+      action: "handover",
+      employeeId,
+      revision: 7,
+      item: "Laptop",
+      asset: "DEMO-001",
+    };
+    await as(employee, handover).expect(403);
+    expect((await post(handover)).status).toBe(201);
+    expect((await post({ ...handover, revision: 8 })).status).toBe(409);
+    expect(
+      (await post({ action: "complete", employeeId, index: 1, revision: 8 }))
+        .status,
+    ).toBe(201);
+    expect((await post({ ...close, revision: 9 })).status).toBe(201);
+    const closed = await getPlan();
+    expect(closed.closedAt).toBeTruthy();
+    expect(closed.readiness?.review?.by).toBe(adminMemberId);
+    expect(
+      (await post({ ...handover, revision: 10, asset: "DEMO-002" })).status,
+    ).toBe(409);
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);

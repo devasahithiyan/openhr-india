@@ -176,3 +176,11 @@ HR can assign effective-dated monthly components and mark which earnings count a
 For Tamil Nadu FY 2024–25, the pilot calculates standard capped employee PF using [versioned rule data and official sources](packages/compliance/rules/tn-2024-25.json). HR verifies coverage and enters externally assessed employee ESI, PT, LWF and TDS amounts with a worksheet reference. A zero requires an explicit entry. Use this pilot only for employees whose PF terms and branch history fit the period. Other states, financial years and special PF cases require additional rules. Filing, employer contributions and bank transfers are future work.
 
 Once all rows have been reviewed, an Admin can approve and publish. Sign in as the pilot employee and choose **My payslip** to see the frozen statement. Later salary revisions, attendance changes and repeated publication preserve the original slips.
+
+### Employee onboarding
+
+After `pnpm db:migrate`, open **Onboarding**. HR can create a branch or department template, define role-owned tasks and set due dates relative to joining. **Add employee** can take HR straight to template selection. Restarting the same plan preserves progress. Preview a joining-date change before moving unfinished deadlines.
+
+The first-week workspace provides a schedule, buddy and manager contacts, welcome links, policy acknowledgements and blockers. HR can group readiness by joining week or branch, identify the owner of overdue work, record equipment handover or an exemption, and close the plan after final review. Materials are links. Store private identity documents separately.
+
+In the standalone demo, open **Admin → Onboarding**, start the Design first week template for the fictional Chennai designer, and select a buddy under **Edit first-week details**. Switch to the new hire to acknowledge the handbook and flag a missing laptop. Switch to the reporting manager to finish their task, and return to HR to resolve the blocker, record handover and close the plan. The demo keeps progress across role switches and reloads. To update the standalone copy after changing the shared model or board, run `node scripts/sync-onboarding.mjs`. Lint checks that both copies match.
