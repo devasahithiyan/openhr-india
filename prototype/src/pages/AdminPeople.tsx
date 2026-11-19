@@ -94,7 +94,7 @@ export function AdminPeople() {
   );
 }
 
-function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => void }) {
+export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => void }) {
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);

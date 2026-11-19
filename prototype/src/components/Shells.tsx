@@ -23,6 +23,7 @@ export function AdminShell() {
   const nav = [
     { to: "/admin", label: "Overview", end: true },
     { to: "/admin/people", label: "People" },
+    { to: "/admin/org", label: "Org chart" },
     { to: "/admin/leave", label: "Leave requests", badge: pending },
     { to: "/admin/payroll", label: "Payroll" },
     { to: "/admin/compliance", label: "Compliance" },

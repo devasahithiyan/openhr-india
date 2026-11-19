@@ -6,6 +6,7 @@ import { AdminShell, EmployeeShell } from "./components/Shells";
 import { DemoProvider } from "./lib/store";
 import { AdminCompliance } from "./pages/AdminCompliance";
 import { AdminLeave } from "./pages/AdminLeave";
+import { AdminOrg } from "./pages/AdminOrg";
 import { AdminOverview } from "./pages/AdminOverview";
 import { AdminPayroll } from "./pages/AdminPayroll";
 import { AdminPeople } from "./pages/AdminPeople";
@@ -42,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/admin" element={<AdminShell />}>
             <Route index element={<AdminOverview />} />
             <Route path="people" element={<AdminPeople />} />
+            <Route path="org" element={<AdminOrg />} />
             <Route path="leave" element={<AdminLeave />} />
             <Route path="payroll" element={<AdminPayroll />} />
             <Route path="compliance" element={<AdminCompliance />} />
