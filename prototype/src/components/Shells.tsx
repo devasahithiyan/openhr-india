@@ -28,6 +28,7 @@ export function AdminShell() {
     { to: "/admin/leave", label: "Leave requests", badge: pending },
     { to: "/admin/calendar", label: "Team calendar" },
     { to: "/admin/attendance", label: "Attendance", badge: pendingCorrections },
+    { to: "/admin/expenses", label: "Expenses" },
     { to: "/admin/payroll", label: "Payroll" },
     { to: "/admin/compliance", label: "Compliance" },
   ];
@@ -100,6 +101,7 @@ export function EmployeeShell() {
     { to: "/me", label: "Home", end: true },
     { to: "/me/payslips", label: "Payslips" },
     { to: "/me/leave", label: "Leave" },
+    { to: "/me/expenses", label: "Expenses" },
     { to: "/me/attendance", label: "Attendance" },
     { to: "/me/tax", label: "Tax" },
     { to: "/me/profile", label: "Profile" },

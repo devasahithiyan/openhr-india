@@ -1,3 +1,4 @@
+import { initialClaims, updateClaims, type Claim, type Action as ExpenseAction, type Role as ExpenseRole } from "./expenses";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   DEMO_EMPLOYEE_ID,
@@ -24,6 +25,7 @@ export type PayrollStage = "review" | "calculated" | "approved" | "paid";
 export const DEMO_TODAY = "2026-11-19";
 
 interface DemoState {
+  claims: Claim[];
   leaves: LeaveRequest[];
   filings: Filing[];
   payrollStage: PayrollStage;
@@ -36,6 +38,7 @@ interface DemoState {
 }
 
 interface DemoStore extends DemoState {
+  expense: (role: ExpenseRole, action: ExpenseAction) => void;
   applyLeave: (l: Omit<LeaveRequest, "id" | "status" | "appliedOn" | "employeeId">) => void;
   withdrawLeave: (id: string) => void;
   setLeaveStatus: (id: string, status: LeaveStatus) => void;
@@ -58,6 +61,7 @@ const me = EMPLOYEES.find((e) => e.id === DEMO_EMPLOYEE_ID)!;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const initial = (): DemoState => ({
+  claims: initialClaims,
   leaves: INITIAL_LEAVES,
   filings: INITIAL_FILINGS,
   payrollStage: "review",
@@ -97,6 +101,10 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const store: DemoStore = {
     ...state,
+    expense: (role, action) => {
+      const id = uid("expense");
+      setState((s) => ({ ...s, claims: updateClaims(s.claims, role, action, DEMO_TODAY, id) }));
+    },
     applyLeave: (l) =>
       setState((s) => ({
         ...s,

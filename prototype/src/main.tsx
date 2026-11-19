@@ -14,6 +14,7 @@ import { AdminPayroll } from "./pages/AdminPayroll";
 import { AdminPeople } from "./pages/AdminPeople";
 import { EmployeeHome, EmployeeLeave, EmployeePayslips, EmployeeProfile, EmployeeTax } from "./pages/Employee";
 import { EmployeeAttendance } from "./pages/EmployeeAttendance";
+import { Expenses } from "./pages/Expenses";
 import { Landing } from "./pages/Landing";
 
 function ScrollToTop() {
@@ -50,11 +51,13 @@ createRoot(document.getElementById("root")!).render(
             <Route path="leave" element={<AdminLeave />} />
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="attendance" element={<AdminAttendance />} />
+            <Route path="expenses" element={<Expenses admin />} />
             <Route path="payroll" element={<AdminPayroll />} />
             <Route path="compliance" element={<AdminCompliance />} />
           </Route>
           <Route path="/me" element={<EmployeeShell />}>
             <Route index element={<EmployeeHome />} />
+            <Route path="expenses" element={<Expenses />} />
             <Route path="payslips" element={<EmployeePayslips />} />
             <Route path="leave" element={<EmployeeLeave />} />
             <Route path="attendance" element={<EmployeeAttendance />} />
