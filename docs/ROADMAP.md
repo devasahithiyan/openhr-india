@@ -3,13 +3,13 @@
 A rough phasing plan. Open an issue to discuss changes.
 
 ## Phase 0 — Foundations
-- [ ] Choose tech stack and architecture (multi-tenant vs single-tenant, database, API style)
-- [ ] Project setup: linting, tests, CI, Docker-based local dev
-- [ ] Auth, roles and permissions (Admin, HR, Manager, Employee)
+- [x] Choose tech stack and architecture (multi-tenant vs single-tenant, database, API style)
+- [x] Project setup: linting, tests, CI, Docker-based local dev
+- [x] Auth, roles and permissions (Admin, HR, Manager, Employee)
 
 ## Phase 1 — Core HR
-- [ ] Company, branches (with state), departments, designations
-- [ ] Employee master and documents
+- [x] Company, branches (with state), departments, designations
+- [ ] Employee master and documents (employee master implemented; document uploads pending)
 - [ ] Employee self-service portal
 
 ## Phase 2 — Attendance & Leave

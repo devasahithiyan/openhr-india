@@ -52,7 +52,79 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for phasing.
 
 ## Getting started
 
-The codebase is not set up yet. Watch or star the repo to follow along, and check the issues to see where you can help.
+The real app now has a company-isolated Auth + People foundation. Payroll, leave and tax screens in `prototype/` are still illustrative demos, separate from the real application.
+
+### Run the whole foundation with Docker
+
+Requires Docker Compose v2. Node 22 and pnpm 10.30.1 are needed for development; `node scripts/setup-env.mjs` also works without pnpm to generate the environment file.
+
+```bash
+pnpm setup:env                    # generate local .env and encryption key once
+# Starts Postgres, applies migrations, builds and starts API + web:
+docker compose up --build
+# In another terminal, create explicitly fictional demonstration accounts:
+docker compose exec -e DEMO_SEED=true api pnpm db:seed
+```
+
+Open http://localhost:3000. Demo workspace: `demo`; password: `Demo-only-1234`; emails: `admin@example.test`, `hr@example.test`, `manager@example.test`, `employee@example.test`. These are fictional development credentials. Seeding requires `DEMO_SEED=true` and is disabled when `NODE_ENV=production`. A new installation has no accounts until provisioned or explicitly seeded. `docker compose down` preserves the database volume; never use `down -v` on data you need.
+
+### Develop locally
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm setup:env                    # skip if .env already exists
+pnpm db:generate
+# Start only the database, then run apps on the host:
+docker compose up -d db
+pnpm db:migrate
+DEMO_SEED=true pnpm db:seed
+pnpm dev                         # web :3000, API :3001
+```
+
+Existing PostgreSQL works too: point `DATABASE_URL` in `.env` to your database and omit the Docker command. Keep the local web origin exactly `http://localhost:3000`. API rewrites use `API_INTERNAL_URL` at build time (default `http://127.0.0.1:3001` for host development). The Docker build defaults this to `http://api:3001` for Compose; override the Docker build argument if you change the service topology. Next.js does not require access to personal data to build.
+
+Create a company/account through the CLI using a password environment variable (never a command-line argument). In zsh, this prompts without echoing:
+
+```bash
+read -rs 'OPENHR_PASSWORD?Password (12+ characters): '; echo
+export OPENHR_PASSWORD
+pnpm provision account example-company "Example Company" admin@example.test Admin
+unset OPENHR_PASSWORD
+```
+
+Use Organisation setup inside Add employee to create branches/departments/designations, then save employees. To link another role, repeat provisioning with the same company slug and an Employee or Manager role followed by that person's employee code. Reusing an email across companies requires the identity's existing password; the login is shared and the roles are company-specific. Reprovisioning a membership revokes its sessions. `pnpm provision password email@example.test` changes the identity's password using `OPENHR_PASSWORD` and revokes all its sessions.
+
+### Checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+# Create a separate empty PostgreSQL database named openhr_test first.
+# Apply migrations to it (existing environment variables override .env):
+DATABASE_URL=postgresql://user:password@localhost:5432/openhr_test pnpm db:migrate
+TEST_DATABASE_URL=postgresql://user:password@localhost:5432/openhr_test pnpm test:integration
+pnpm build
+# Browser tests use the local .env database; seed fake demo accounts first:
+DEMO_SEED=true pnpm db:seed
+pnpm exec playwright install chromium
+pnpm test:e2e                 # uses production builds from pnpm build
+# The original demo remains independent:
+pnpm --dir prototype install --frozen-lockfile --ignore-workspace
+pnpm --dir prototype build
+pnpm --dir prototype dev
+```
+
+Integration tests refuse databases whose names do not end in `_test` and clean up their own generated fixtures. Browser tests create fictional E2E employees in the demo company, so use a development database. CI runs lint, typecheck, unit tests, migrated-Postgres integration tests, production builds and desktop/mobile workflow tests.
+
+See [architecture decision](docs/adr/0001-tech-stack.md) and [REST API contract](docs/API.md). All four roles have server-side access checks; Admin/HR manage employees, Managers read self/direct reports, Employees read self.
+
+### Data handling and self-hosting
+
+PAN, bank account, UAN, ESIC and IFSC values are encrypted with AES-256-GCM, tied to company/employee/field context. Only Aadhaar's final four digits are accepted. Normal readbacks are masked. Blank private fields preserve saved values; Clear removes them. Request bodies, passwords and private identifiers are not logged.
+
+The checked-in Compose setup is local development infrastructure with an explicit development database password. Production requires an operator-selected hosting setup, HTTPS, `NODE_ENV=production`, the exact HTTPS `APP_ORIGIN`, strong database credentials, protected backups and access controls. Keep `DATA_ENCRYPTION_KEY` outside Git and back it up securely: losing it makes encrypted identifiers unreadable. Key rotation, retention/deletion workflows, audit trails, MFA and account invitation/recovery screens remain future work. This foundation does not claim DPDP certification or production payroll compliance.
 
 ## Contributing
 
