@@ -1,0 +1,298 @@
+"use client";
+import { useState, type FormEvent } from "react";
+import {
+  isHR,
+  ownsTask,
+  matchesTemplate,
+  shiftDay,
+  type OnboardingData,
+  type OnboardingAction,
+  type Viewer,
+  type TemplateTask,
+  type Plan,
+  type DirectoryPerson,
+  type Option,
+} from "@openhr/shared";
+export type Send = (a: OnboardingAction) => Promise<boolean>;
+function SelectScope({ name, options }: { name: string; options: Option[] }) {
+  return (
+    <label>
+      {name}
+      <select name={name}>
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+function Templates({ data, send }: { data: OnboardingData; send: Send }) {
+  const blank = (): TemplateTask => ({
+    title: "",
+    owner: "Employee",
+    offset: 0,
+  });
+  const [tasks, set] = useState([blank()]);
+  const edit = (i: number, patch: Partial<TemplateTask>) =>
+    set(tasks.map((t, n) => (i === n ? { ...t, ...patch } : t)));
+  async function save(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget,
+      f = new FormData(form);
+    if (
+      await send({
+        action: "template",
+        name: String(f.get("name")),
+        branchId: String(f.get("Branch")) || null,
+        departmentId: String(f.get("Department")) || null,
+        definitions: tasks,
+      })
+    ) {
+      form.reset();
+      set([blank()]);
+    }
+  }
+  return (
+    <details className="panel">
+      <summary>Create onboarding template</summary>
+      <form className="grid gap-3 py-3" onSubmit={save}>
+        <label>
+          Template name
+          <input name="name" required maxLength={160} />
+        </label>
+        <SelectScope name="Branch" options={data.branches} />
+        <SelectScope name="Department" options={data.departments} />
+        {tasks.map((t, i) => (
+          <fieldset key={i} className="grid gap-2 sm:grid-cols-3">
+            <legend>Task {i + 1}</legend>
+            <label>
+              Task name
+              <input
+                required
+                maxLength={160}
+                value={t.title}
+                onChange={(e) => edit(i, { title: e.target.value })}
+              />
+            </label>
+            <label>
+              Owner
+              <select
+                value={t.owner}
+                onChange={(e) =>
+                  edit(i, { owner: e.target.value as TemplateTask["owner"] })
+                }
+              >
+                {["HR", "Employee", "Manager"].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Days from joining
+              <input
+                type="number"
+                min="-90"
+                max="180"
+                required
+                value={t.offset}
+                onChange={(e) => edit(i, { offset: Number(e.target.value) })}
+              />
+            </label>
+            {tasks.length > 1 && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => set(tasks.filter((_, n) => n !== i))}
+              >
+                Remove task {i + 1}
+              </button>
+            )}
+          </fieldset>
+        ))}
+        <div className="flex gap-2">
+          {tasks.length < 60 && (
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => set([...tasks, blank()])}
+            >
+              Add task
+            </button>
+          )}
+          <button>Save template</button>
+        </div>
+      </form>
+    </details>
+  );
+}
+function Start({
+  data,
+  send,
+  initialEmployee,
+}: {
+  data: OnboardingData;
+  send: Send;
+  initialEmployee?: string;
+}) {
+  const [selected, set] = useState(initialEmployee || "");
+  const person = data.people.find((p) => p.id === selected);
+  return (
+    <form
+      className="panel grid gap-3 sm:grid-cols-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        void send({
+          action: "start",
+          employeeId: selected,
+          templateId: String(f.get("template")),
+        });
+      }}
+    >
+      <label>
+        New joiner
+        <select required value={selected} onChange={(e) => set(e.target.value)}>
+          <option value="">Choose employee</option>
+          {data.people.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Onboarding template
+        <select key={selected} name="template" required defaultValue="">
+          <option value="">Choose template</option>
+          {person &&
+            data.templates
+              .filter((t) => matchesTemplate(person, t))
+              .map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+        </select>
+      </label>
+      <button>Start onboarding</button>
+    </form>
+  );
+}
+function Reschedule({
+  plan,
+  p,
+  send,
+}: {
+  plan: Plan;
+  p: DirectoryPerson;
+  send: Send;
+}) {
+  const [day, set] = useState(p.joined);
+  return (
+    <details>
+      <summary>Preview a joining date change</summary>
+      <label>
+        New joining date
+        <input type="date" value={day} onChange={(e) => set(e.target.value)} />
+      </label>
+      {day && day !== plan.startedFor && (
+        <>
+          <ul>
+            {plan.tasks
+              .filter((t) => !t.done)
+              .map((t, i) => (
+                <li key={i}>
+                  {t.title} · {t.due} → {shiftDay(day, t.offset)}
+                </li>
+              ))}
+          </ul>
+          <button
+            onClick={() =>
+              send({
+                action: "reschedule",
+                day,
+                previousJoining: p.joined,
+                employeeId: p.id,
+                revision: plan.revision,
+              })
+            }
+          >
+            Confirm joining date
+          </button>
+        </>
+      )}
+    </details>
+  );
+}
+export function OnboardingBoard({
+  data,
+  viewer,
+  send,
+  initialEmployee,
+}: {
+  data: OnboardingData;
+  viewer: Viewer;
+  send: Send;
+  initialEmployee?: string;
+}) {
+  const hr = isHR(viewer);
+  return (
+    <section className="onboarding space-y-4">
+      <h1 className="text-3xl font-bold">
+        {hr ? "Onboarding" : "My onboarding"}
+      </h1>
+      {hr && (
+        <>
+          <Templates data={data} send={send} />
+          <Start data={data} send={send} initialEmployee={initialEmployee} />
+        </>
+      )}
+      {!data.plans.length && <p>No onboarding plans yet.</p>}
+      {data.plans.map((plan) => {
+        const p = data.people.find((p) => p.id === plan.employeeId)!;
+        return (
+          <article className="panel space-y-3" key={p.id}>
+            <h2 className="text-xl font-bold">{p.name}</h2>
+            <p>
+              {data.templates.find((t) => t.id === plan.templateId)?.name} ·
+              Joining {p.joined} · {plan.tasks.filter((t) => t.done).length}/
+              {plan.tasks.length} complete
+            </p>
+            <ul>
+              {plan.tasks.map((t, index) => (
+                <li className="border-b border-line py-2" key={index}>
+                  <strong>{t.title}</strong> · {t.owner} · {t.due} ·{" "}
+                  {t.done
+                    ? "Complete"
+                    : t.due < data.today
+                      ? "Overdue"
+                      : "Open"}{" "}
+                  {!plan.closedAt && !t.done && ownsTask(viewer, p, t) && (
+                    <button
+                      onClick={() =>
+                        send({
+                          action: "complete",
+                          employeeId: p.id,
+                          revision: plan.revision,
+                          index,
+                        })
+                      }
+                    >
+                      Complete task
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {hr && !plan.closedAt && (
+              <Reschedule plan={plan} p={p} send={send} />
+            )}
+          </article>
+        );
+      })}
+    </section>
+  );
+}

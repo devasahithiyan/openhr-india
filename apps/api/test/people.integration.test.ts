@@ -1,3 +1,4 @@
+import type { OnboardingData } from "@openhr/shared";
 import type { ExpenseView } from "@openhr/shared";
 import type { PayRow, PayrollView } from "@openhr/shared";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
@@ -192,6 +193,8 @@ afterAll(async () => {
     await db.payrollRun.deleteMany({ where: { companyId } });
     await db.payrollReview.deleteMany({ where: { companyId } });
     await db.salary.deleteMany({ where: { companyId } });
+    await db.onboardingPlan.deleteMany({ where: { companyId } });
+    await db.onboardingTemplate.deleteMany({ where: { companyId } });
     await db.expenseEvent.deleteMany({ where: { companyId } });
     await db.expenseClaim.deleteMany({ where: { companyId } });
     await db.correction.deleteMany({ where: { companyId } });
@@ -793,6 +796,71 @@ describe("real database Auth + People API", () => {
       ).status,
     ).toBe(201);
     expect((await list(cookies(emp))).claims).toHaveLength(1);
+  });
+  it("applies scoped onboarding templates once and only shifts unfinished deadlines", async () => {
+    const employee = await login(undefined, `employee-${suffix}@example.test`);
+    const foreign = await login(`other-${suffix}`);
+    const read = async (c = cookie): Promise<OnboardingData> =>
+      (
+        await request(app.getHttpServer())
+          .get("/api/onboarding")
+          .set("Cookie", c)
+          .expect(200)
+      ).body;
+    const post = (cmd: object) => write("/api/onboarding", cmd);
+    const as = (s: request.Response, cmd: object) =>
+      request(app.getHttpServer())
+        .post("/api/onboarding")
+        .set("Cookie", cookies(s))
+        .set("Origin", origin)
+        .set("x-csrf-token", s.body.csrfToken)
+        .send(cmd);
+    const template = {
+      action: "template",
+      name: "Design week",
+      branchId: ownBranch,
+      departmentId,
+      definitions: [
+        { title: "Welcome", owner: "Employee", offset: 0 },
+        { title: "Prepare desk", owner: "HR", offset: -2 },
+      ],
+    };
+    await as(employee, template).expect(403);
+    await as(foreign, template).expect(400);
+    const { id: templateId } = (await post(template)).body;
+    const start = { action: "start", employeeId, templateId };
+    expect((await post(start)).status).toBe(201);
+    const getPlan = async () =>
+      (await read()).plans.find((p) => p.employeeId === employeeId)!;
+    const original = await getPlan();
+    await as(employee, {
+      action: "complete",
+      employeeId,
+      index: 1,
+      revision: 1,
+    }).expect(409);
+    await as(employee, {
+      action: "complete",
+      employeeId,
+      index: 0,
+      revision: 1,
+    }).expect(201);
+    expect((await post(start)).status).toBe(201);
+    expect((await getPlan()).revision).toBe(2);
+    expect((await read(cookies(foreign))).plans).toEqual([]);
+    const shift = {
+      action: "reschedule",
+      employeeId,
+      revision: 2,
+      day: "2026-04-09",
+      previousJoining: original.startedFor,
+    };
+    expect((await post(shift)).status).toBe(201);
+    expect((await getPlan()).tasks.map((t) => t.due)).toEqual([
+      original.tasks[0]!.due,
+      "2026-04-07",
+    ]);
+    expect((await post(shift)).status).toBe(409);
   });
   it("limits employees to self and applies role changes on existing sessions", async () => {
     const signed = await login(undefined, `employee-${suffix}@example.test`);

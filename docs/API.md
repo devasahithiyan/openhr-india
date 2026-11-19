@@ -45,3 +45,7 @@ All requests use the existing session and company scope. Writes require Origin a
 `GET /api/expenses` returns visible claims, itemized amounts in paise, status history and allowed actions. HR and Admin also receive the company total approved and awaiting reimbursement. Managers can see their own claims and direct reports’ claims. Employees see their own.
 
 `POST /api/expenses` takes an action. Submit accepts one to forty items (date in `day`, category, integer `paise` and business purpose). Resubmit takes corrected items. Approve and return operate on submitted claims and return requires a reason. Reimburse takes the actual payment day and a reference. Every action after submission includes the claim ID and the last seen revision. A stale update returns 409. Repeating a completed payment with the same date and reference returns the existing claim ID.
+
+### Onboarding plans
+
+GET /api/onboarding returns company plans for HR/Admin, self and direct reports for managers, and the employee’s own plan for employees. POST accepts template, start, complete and reschedule. Plan mutations carry the revision the actor last saw. Rescheduling updates the employee’s joining date and only unfinished task deadlines in one transaction.
