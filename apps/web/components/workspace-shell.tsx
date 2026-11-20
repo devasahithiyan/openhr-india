@@ -36,6 +36,135 @@ type Props = {
     attrs: { className: string; "aria-current"?: "page" },
   ) => ReactNode;
 };
+function JumpMenu({ items, link }: { items: NavItem[]; link: Props["link"] }) {
+  const modal = useRef<HTMLDialogElement>(null),
+    field = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  function open() {
+    if (!modal.current?.open) {
+      setQuery("");
+      modal.current?.showModal();
+      field.current?.focus();
+    }
+  }
+  useEffect(() => {
+    const shortcuts = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (modal.current?.open) modal.current.close();
+        else open();
+      }
+    };
+    document.addEventListener("keydown", shortcuts);
+    return () => document.removeEventListener("keydown", shortcuts);
+  }, []);
+  const results = items.filter((i) =>
+    (i.label + " " + i.group)
+      .toLowerCase()
+      .includes(query.trim().toLowerCase()),
+  );
+  return (
+    <>
+      <button
+        type="button"
+        className="hr-jump-trigger"
+        onClick={open}
+        aria-haspopup="dialog"
+      >
+        <svg
+          aria-hidden="true"
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="10" cy="10" r="6" />
+          <path d="m15 15 6 6" />
+        </svg>
+        Find a page
+      </button>
+      <dialog
+        ref={modal}
+        className="hr-jump"
+        aria-label="Find a page"
+        onClick={(e) => {
+          if (e.target === modal.current) {
+            const rect = modal.current.getBoundingClientRect();
+            if (
+              e.clientX < rect.left ||
+              e.clientX > rect.right ||
+              e.clientY < rect.top ||
+              e.clientY > rect.bottom
+            )
+              modal.current.close();
+          }
+        }}
+        onKeyDown={(e) => {
+          const links = Array.from(
+            modal.current?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
+          );
+          const index = links.indexOf(
+            document.activeElement as HTMLAnchorElement,
+          );
+          if (e.key === "ArrowDown" && links.length) {
+            e.preventDefault();
+            links[(index + 1) % links.length]?.focus();
+          }
+          if (e.key === "ArrowUp" && links.length) {
+            e.preventDefault();
+            if (index <= 0) field.current?.focus();
+            else links[index - 1]?.focus();
+          }
+          if (e.key === "Enter" && e.target === field.current && links.length) {
+            e.preventDefault();
+            links[0]?.click();
+          }
+        }}
+      >
+        <header>
+          <label htmlFor="jump-query">Find a page</label>
+          <button
+            type="button"
+            aria-label="Close page finder"
+            onClick={() => modal.current?.close()}
+          >
+            ✕
+          </button>
+        </header>
+        <input
+          id="jump-query"
+          ref={field}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          type="search"
+          placeholder="Search workspace pages"
+          autoComplete="off"
+        />
+        <ul
+          onClick={(e) => {
+            if ((e.target as Element).closest("a")) modal.current?.close();
+          }}
+        >
+          {results.map((i) => (
+            <li key={i.href}>
+              {link(
+                i.href,
+                <>
+                  <span>{i.label}</span>
+                  <small>{i.group}</small>
+                </>,
+                { className: "hr-jump-result" },
+              )}
+            </li>
+          ))}
+        </ul>
+        {!results.length && <p role="status">No matching pages.</p>}
+      </dialog>
+    </>
+  );
+}
 export function WorkspaceShell({
   items,
   pathname,
@@ -85,6 +214,7 @@ export function WorkspaceShell({
             {expanded ? "Close menu" : "All sections"}
           </button>
         </div>
+        <JumpMenu items={items} link={link} />
         <nav
           ref={nav}
           id="workspace-nav"
