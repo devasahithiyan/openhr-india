@@ -393,25 +393,28 @@ export function WorkBoard({
     );
   return (
     <section className="workforce space-y-4">
-      <header>
+      <header className="hr-work-heading">
         <h1 className="text-3xl font-bold">Workforce operations</h1>
+        <label>
+          Workspace
+          <select
+            value={kind}
+            onChange={(e) => set(e.target.value as WorkKind)}
+          >
+            {Object.entries(workTitles)
+              .filter(
+                ([k]) =>
+                  workHR(viewer) ||
+                  !["recruit", "position", "clearanceTemplate"].includes(k),
+              )
+              .map(([k, n]) => (
+                <option key={k} value={k}>
+                  {n}
+                </option>
+              ))}
+          </select>
+        </label>
       </header>
-      <label>
-        Workspace
-        <select value={kind} onChange={(e) => set(e.target.value as WorkKind)}>
-          {Object.entries(workTitles)
-            .filter(
-              ([k]) =>
-                workHR(viewer) ||
-                !["recruit", "position", "clearanceTemplate"].includes(k),
-            )
-            .map(([k, n]) => (
-              <option key={k} value={k}>
-                {n}
-              </option>
-            ))}
-        </select>
-      </label>
       <h2 className="text-xl font-bold">{workTitles[kind]}</h2>
       <div className="space-y-2">
         {available().map(([action]) => (
@@ -424,9 +427,11 @@ export function WorkBoard({
           />
         ))}
       </div>
-      {!records.length && <p>No records in this workspace yet.</p>}
+      {!records.length && (
+        <p className="hr-empty">No records in this workspace yet.</p>
+      )}
       {records.map((r) => (
-        <article className="panel space-y-3" key={r.id}>
+        <article className="hr-record panel space-y-3" key={r.id}>
           <h3 className="font-bold">
             {r.values.name ??
               r.values.skill ??
@@ -435,7 +440,7 @@ export function WorkBoard({
             {r.employeeId ? " · " + display(data, "person", r.employeeId) : ""}
           </h3>
           <p>
-            {r.status}
+            <span className="hr-status">{r.status}</span>
             {r.values.due ? " · Due " + r.values.due : ""}
             {r.values.due! < data.today &&
             [

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Button, PageHeader, Pill, fmtDate } from "../components/ui";
 import { BRANCHES, type Employee } from "../lib/data";
 import { ESI_GROSS_LIMIT, rupees } from "../lib/payroll";
@@ -49,7 +49,7 @@ const employees=useDirectory();
       </div>
 
       <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-line">
-        <table className="w-full min-w-[720px] text-left text-[15px]">
+        <table className="hr-directory w-full min-w-[720px] text-left text-[15px]">
           <thead className="border-b border-line text-[14px] text-muted">
             <tr>
               <th className="px-5 py-3 font-medium">Name</th>
@@ -61,7 +61,7 @@ const employees=useDirectory();
           </thead>
           <tbody className="divide-y divide-line">
             {list.map((e) => (
-              <tr key={e.id} className="cursor-pointer hover:bg-paper" onClick={() => setSelected(e)}>
+              <tr key={e.id} className="cursor-pointer hover:bg-paper" onClick={event => {event.currentTarget.querySelector("button")?.focus();setSelected(e);}}>
                 <td className="px-5 py-3">
                   <button className="flex items-center gap-3 text-left" onClick={() => setSelected(e)}>
                     <Avatar name={e.name} size="sm" />
@@ -73,10 +73,10 @@ const employees=useDirectory();
                     </span>
                   </button>
                 </td>
-                <td className="px-3 py-3">{e.department}</td>
-                <td className="px-3 py-3">{e.branch}</td>
-                <td className="px-3 py-3">{fmtDate(e.joined)}</td>
-                <td className="num px-5 py-3 text-right">{rupees(e.monthlyGross)}</td>
+                <td className="px-3 py-3" data-field="Department">{e.department}</td>
+                <td className="px-3 py-3" data-field="Branch">{e.branch}</td>
+                <td className="px-3 py-3" data-field="Joined">{fmtDate(e.joined)}</td>
+                <td className="num px-5 py-3 text-right" data-field="Monthly gross">{rupees(e.monthlyGross)}</td>
               </tr>
             ))}
             {list.length === 0 && (
@@ -96,11 +96,13 @@ const employees=useDirectory();
 }
 
 export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => void }) {
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => ev.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const dialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{
+    const el=dialog.current;
+    const trigger=document.activeElement;
+    el?.showModal();
+    return ()=>{el?.close();if(trigger instanceof HTMLElement && trigger.isConnected)trigger.focus({preventScroll:true});};
+  },[]);
   const manager=useDirectory().find(p=>p.id===e.managerId);
 
   const groups: [string, [string, string][]][] = [
@@ -137,9 +139,8 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
   ];
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end" role="dialog" aria-modal="true" aria-label={e.name}>
-      <button className="absolute inset-0 bg-indigo-deep/40" aria-label="Close" onClick={onClose} tabIndex={-1} />
-      <div className="relative h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-2xl">
+    <dialog ref={dialog} className="hr-drawer" aria-label={e.name} onCancel={onClose} onClick={event=>{if(event.target===dialog.current){const r=event.currentTarget.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)onClose();}}}>
+      <div className="p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <Avatar name={e.name} size="lg" />
@@ -148,7 +149,7 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
               <p className="text-muted">{e.code}</p>
             </div>
           </div>
-          <Button autoFocus variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -169,6 +170,6 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
           </section>
         ))}
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -30,13 +30,13 @@ export function AdminOverview() {
         title="Good morning, Meenakshi"
         sub={dateLabel}
         action={
-          <Link to="/admin/payroll">
-            <Button>{published ? "View November payroll" : "Review November payroll"}</Button>
+          <Link className="hr-primary-link" to="/admin/payroll">
+            {published ? "View November payroll" : "Review November payroll"}
           </Link>
         }
       />
 
-      <dl className="mb-10 grid grid-cols-2 rounded-xl bg-white ring-1 ring-line lg:grid-cols-4 lg:divide-x lg:divide-line">
+      <dl className="hr-metrics mb-8 grid grid-cols-2 rounded-xl bg-white ring-1 ring-line lg:grid-cols-4 lg:divide-x lg:divide-line">
         {figures.map((f) => (
           <div key={f.label} className="px-5 py-5">
             <dt className="text-[14px] text-muted">{f.label}</dt>
