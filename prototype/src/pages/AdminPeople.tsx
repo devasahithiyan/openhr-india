@@ -61,7 +61,7 @@ const employees=useDirectory();
           </thead>
           <tbody className="divide-y divide-line">
             {list.map((e) => (
-              <tr key={e.id} className="cursor-pointer hover:bg-paper" onClick={() => setSelected(e)}>
+              <tr key={e.id} className="cursor-pointer hover:bg-paper" onClick={event => {event.currentTarget.querySelector("button")?.focus();setSelected(e);}}>
                 <td className="px-5 py-3">
                   <button className="flex items-center gap-3 text-left" onClick={() => setSelected(e)}>
                     <Avatar name={e.name} size="sm" />
@@ -99,8 +99,9 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
   const dialog=useRef<HTMLDialogElement>(null);
   useEffect(()=>{
     const el=dialog.current;
+    const trigger=document.activeElement;
     el?.showModal();
-    return ()=>el?.close();
+    return ()=>{el?.close();if(trigger instanceof HTMLElement && trigger.isConnected)trigger.focus({preventScroll:true});};
   },[]);
   const manager=useDirectory().find(p=>p.id===e.managerId);
 
@@ -148,7 +149,7 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
               <p className="text-muted">{e.code}</p>
             </div>
           </div>
-          <Button autoFocus variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Close
           </Button>
         </div>
