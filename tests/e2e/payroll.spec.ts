@@ -6,9 +6,19 @@ test("HR previews the three March pilot payroll cases", async ({ page }) => {
   await page.getByLabel("Password", { exact: true }).fill("Demo-only-1234");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("link", { name: "Payroll", exact: true }).click();
-  await expect(page.getByText(/3 employees · Gross/)).toContainText(
-    "77,000.00",
-  );
+  const register = page.locator(".register-ledger");
+  await expect(
+    register
+      .getByText("Employees", { exact: true })
+      .locator("..")
+      .getByRole("definition"),
+  ).toHaveText("3");
+  await expect(
+    register
+      .getByText("Gross pay", { exact: true })
+      .locator("..")
+      .getByRole("definition"),
+  ).toContainText("77,000.00");
   const joiner = page
     .locator("article")
     .filter({ hasText: "Demo March Joiner" });

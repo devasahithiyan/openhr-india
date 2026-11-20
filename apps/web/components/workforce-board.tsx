@@ -415,7 +415,12 @@ export function WorkBoard({
           </select>
         </label>
       </header>
-      <h2 className="text-xl font-bold">{workTitles[kind]}</h2>
+      <h2 key={kind} className="workflow-group-title">
+        {workTitles[kind]}{" "}
+        <small>
+          {records.length} {records.length === 1 ? "record" : "records"}
+        </small>
+      </h2>
       <div className="space-y-2">
         {available().map(([action]) => (
           <ActionForm

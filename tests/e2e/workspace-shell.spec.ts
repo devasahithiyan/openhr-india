@@ -31,3 +31,28 @@ test("workspace navigation marks the current section and keeps the directory wit
   ).toHaveAttribute("aria-current", "page");
   if (isMobile) await expect(menu).toHaveAttribute("aria-expanded", "false");
 });
+
+test("keyboard page finder filters destinations and opens the selected workspace", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("Company workspace").fill("demo");
+  await page.getByLabel("Email", { exact: true }).fill("hr@example.test");
+  await page.getByLabel("Password", { exact: true }).fill("Demo-only-1234");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("button", { name: "Find a page" }).waitFor();
+  await page.keyboard.press("Control+k");
+  const dialog = page.getByRole("dialog", { name: "Find a page" });
+  const search = dialog.getByRole("searchbox");
+  await expect(search).toBeFocused();
+  await search.fill("unmatched page");
+  await expect(dialog.getByRole("status")).toHaveText("No matching pages.");
+  await search.fill("workforce");
+  await search.press("ArrowDown");
+  await expect(dialog.getByRole("link")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Workforce operations" }),
+  ).toBeVisible();
+  await expect(dialog).toBeHidden();
+});

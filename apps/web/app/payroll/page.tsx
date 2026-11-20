@@ -300,16 +300,26 @@ function Period({ month }: { month: string }) {
       {data && (
         <fieldset disabled={busy} className="space-y-4">
           {writer && (
-            <div className="panel">
+            <div className="register-ledger">
               <h2 className="text-xl font-semibold">
                 {data.published ? "Published register" : "Draft register"}
               </h2>
-              <p>
-                {data.rows.length} employees · Gross {money(data.gross)}
-                {data.rows.length > 0 &&
-                  data.net !== null &&
-                  " · Net " + money(data.net)}
-              </p>
+              <dl>
+                <div>
+                  <dt>Employees</dt>
+                  <dd>{data.rows.length}</dd>
+                </div>
+                <div>
+                  <dt>Gross pay</dt>
+                  <dd>{money(data.gross)}</dd>
+                </div>
+                {data.rows.length > 0 && data.net !== null && (
+                  <div>
+                    <dt>Net pay</dt>
+                    <dd>{money(data.net)}</dd>
+                  </div>
+                )}
+              </dl>
             </div>
           )}
           {!data.rows.length && (

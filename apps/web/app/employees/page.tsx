@@ -42,8 +42,8 @@ export default function People() {
   }, [q, page]);
   return (
     <>
-      <div className="hr-page-head mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <header className="loom-hero directory-hero">
+        <div className="loom-intro">
           <h1 className="text-3xl font-bold">People</h1>
           <p className="mt-1 text-muted">
             {user && canManageEmployees(user.role)
@@ -52,13 +52,14 @@ export default function People() {
                 ? "Your profile and direct reports."
                 : "Your employee profile."}
           </p>
+          {user && canManageEmployees(user.role) && (
+            <Link className="loom-link" href="/employees/new">
+              Add employee
+            </Link>
+          )}
         </div>
-        {user && canManageEmployees(user.role) && (
-          <Link className="button" href="/employees/new">
-            Add employee
-          </Link>
-        )}
-      </div>
+        <div className="loom-art" aria-hidden="true" />
+      </header>
       <label className="mb-5 max-w-md" htmlFor="search">
         Find a person
         <input

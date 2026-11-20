@@ -131,7 +131,7 @@ export function AdminPayroll() {
         }
       />
 
-      <dl className="mb-6 grid grid-cols-2 rounded-xl bg-white ring-1 ring-line lg:grid-cols-4 lg:divide-x lg:divide-line">
+      <dl className="register-figures mb-6 grid grid-cols-2 lg:grid-cols-4">
         {figures.map(([k, v, note]) => (
           <div key={k} className="px-5 py-4">
             <dt className="text-[14px] text-muted">{k}</dt>

@@ -23,7 +23,7 @@ export function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_1fr]">
           <div>
             <h1 className="text-[40px] leading-[1.05] font-extrabold tracking-tight text-ink sm:text-[56px]">
-              HR and payroll that already knows PF, ESI and TDS.
+              HR and payroll for Indian teams.
             </h1>
             <p className="mt-5 max-w-xl text-[19px] leading-relaxed text-muted">
               OpenHR India is a free, open-source platform for Indian companies. This demo runs on sample data for a
@@ -56,7 +56,7 @@ export function Landing() {
           </div>
 
           {/* The memorable bit: a real-looking payslip fragment */}
-          <figure className="relative">
+          <figure className="landing-payslip relative">
             <div className="rotate-[1.5deg] rounded-xl border border-line bg-white p-6 shadow-[0_24px_60px_-28px_rgba(30,39,102,0.45)] sm:p-8">
               <div className="flex items-baseline justify-between border-b border-line pb-3">
                 <p className="font-bold">Kaveri Textiles Pvt Ltd</p>
