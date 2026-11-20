@@ -1,3 +1,4 @@
+import "@fontsource/dm-serif-text/latin-400.css";
 import {WorkforceDemo} from "./pages/Workforce";
 import {OnboardingDemo} from "./pages/Onboarding";
 import { StrictMode, useEffect } from "react";

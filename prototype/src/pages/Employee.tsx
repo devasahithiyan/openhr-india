@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { PayslipSheet } from "../components/PayslipSheet";
 import { Button, PageHeader, Pill, Section, fmtDate, fmtDay, fmtShort, statusTone } from "../components/ui";
-import { COMPANY, type LeaveType } from "../lib/data";
+import { type LeaveType } from "../lib/data";
 import { annualTax, computePayslip, rupees, type Regime } from "../lib/payroll";
 import { DEMO_TODAY, useDemo, useMe } from "../lib/store";
 import {demoWork} from "../workforce/adapter";
@@ -39,7 +39,7 @@ export function EmployeeHome() {
 
   return (
     <>
-      <PageHeader title={`Vanakkam, ${me.name.split(" ")[0]}`} sub={`${me.designation}, ${COMPANY.short}, ${me.branch}`} />
+      <header className="loom-hero employee-hero"><div className="loom-intro"><p>{me.designation} · {me.branch}</p><h1>Vanakkam,<br/>{me.name.split(" ")[0]}.</h1><Link className="loom-link" to="/me/profile">View profile <span aria-hidden="true">↗</span></Link></div><div className="loom-art" aria-hidden="true"/></header>
 
       <div className="grid gap-x-10 lg:grid-cols-[1.2fr_1fr]">
         <div>

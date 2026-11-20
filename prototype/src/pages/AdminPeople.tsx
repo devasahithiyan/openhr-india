@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Avatar, Button, PageHeader, Pill, fmtDate } from "../components/ui";
+import { Avatar, Button, Pill, fmtDate } from "../components/ui";
 import { BRANCHES, type Employee } from "../lib/data";
 import { ESI_GROSS_LIMIT, rupees } from "../lib/payroll";
 import {useDirectory} from "../lib/store";
@@ -22,7 +22,7 @@ const employees=useDirectory();
 
   return (
     <>
-      <PageHeader title="People" sub={`${employees.length} employees at Kaveri Textiles`} />
+      <header className="loom-hero directory-hero"><div className="loom-intro"><h1>People</h1><p>{employees.length} employees at Kaveri Textiles</p></div><div className="loom-art" aria-hidden="true"/></header>
 
       <div className="mb-4 flex flex-wrap gap-3">
         <label className="flex-1">

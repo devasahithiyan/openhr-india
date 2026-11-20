@@ -1,3 +1,4 @@
+import "@fontsource/dm-serif-text/latin-400.css";
 import "@fontsource/mukta/400.css";
 import "@fontsource/mukta/600.css";
 import "@fontsource/mukta/700.css";
