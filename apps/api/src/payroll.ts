@@ -76,13 +76,18 @@ async function register(
   const start = month + "-01",
     end = monthEnd(month);
   const people = await tx.employee.findMany({
-    where: { companyId, dateOfJoining: { lte: new Date(end) } },
+    where: {
+      companyId,
+      dateOfJoining: { lte: new Date(end) },
+      OR: [{ endedOn: null }, { endedOn: { gte: start } }],
+    },
     orderBy: { id: "asc" },
     select: {
       id: true,
       name: true,
       code: true,
       dateOfJoining: true,
+      endedOn: true,
       branch: {
         select: {
           state: true,
@@ -151,6 +156,10 @@ async function register(
       p.branch.holidays.map((h) => h.day),
     ).filter((d) => !accounted.has(d));
     const issues: string[] = [];
+    if (p.endedOn && p.endedOn <= end)
+      issues.push(
+        "Departure month requires a final settlement review outside this pilot",
+      );
     const supported =
       month >= pilot.from &&
       month <= pilot.through &&

@@ -101,3 +101,9 @@ body {
 .onboarding :is(input,select,textarea) { display: block; width: 100%; border: 1px solid var(--color-line); padding: .5rem; border-radius: .4rem; background: white; }
 .onboarding button { background: var(--color-indigo); color: white; border-radius: .4rem; padding: .5rem .8rem; }
 .onboarding button.secondary { background: white; border: 1px solid var(--color-line); color: var(--color-indigo); }
+
+.workforce .panel,.workforce .work-action { background: white; border: 1px solid var(--color-line); border-radius: .65rem; padding: 1rem; }
+.workforce :is(select,input:not([type=checkbox])) { width: 100%; display:block; background:white; border:1px solid var(--color-line); padding:.5rem; border-radius:.4rem; }
+.workforce summary { cursor:pointer; font-weight:600; }
+.workforce button { background:var(--color-indigo); color:white; padding:.55rem .9rem; border-radius:.4rem; }
+.workforce article { overflow-wrap:anywhere; }

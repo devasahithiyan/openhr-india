@@ -1,8 +1,10 @@
+import {demoPunchDay,initialWork,type WorkforceState} from "../workforce/adapter";
 import {initialOnboarding} from "../onboarding/seed";
 import type {OnboardingData} from "../onboarding/model";
 import { initialClaims, updateClaims, type Claim, type Action as ExpenseAction, type Role as ExpenseRole } from "./expenses";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
+  BRANCHES,type Employee,
   DEMO_EMPLOYEE_ID,
   EMPLOYEES,
   INITIAL_ATTENDANCE,
@@ -27,6 +29,7 @@ import type { Assessment, PublishedRun, SalaryComponent } from "./payrollRun";
 export const DEMO_TODAY = "2026-11-19";
 
 interface DemoState {
+ workforce:WorkforceState;
   onboarding:OnboardingData;
   claims: Claim[];
   leaves: LeaveRequest[];
@@ -45,6 +48,7 @@ interface DemoState {
 }
 
 interface DemoStore extends DemoState {
+ saveWork:(next:{workforce:WorkforceState;onboarding:OnboardingData})=>void;
   saveOnboarding:(data:OnboardingData)=>void;
   expense: (role: ExpenseRole, action: ExpenseAction) => void;
   applyLeave: (l: Omit<LeaveRequest, "id" | "status" | "appliedOn" | "employeeId">) => void;
@@ -73,7 +77,7 @@ const me = EMPLOYEES.find((e) => e.id === DEMO_EMPLOYEE_ID)!;
 const uid = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const initial = (): DemoState => ({
-  onboarding:initialOnboarding(),
+  workforce:initialWork(),onboarding:initialOnboarding(),
   claims: initialClaims,
   leaves: INITIAL_LEAVES,
   filings: INITIAL_FILINGS,
@@ -115,11 +119,14 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, calendars: { ...s.calendars, [branch]: fn(s.calendars[branch]) } }));
 
   const store: DemoStore = {
-    ...state,
+    ...state,saveWork:next=>setState(s=>({...s,...next,onboarding:{...next.onboarding,people:next.onboarding.people.map(p=>{
+ const w=next.workforce.people.find(w=>w.id===p.id);
+ return w?{...p,branchId:w.branch.toLowerCase(),departmentId:w.department.toLowerCase(),managerId:w.manager||null}:p;
+ })}})),
     saveOnboarding:onboarding=>setState(s=>({...s,onboarding})),
     expense: (role, action) => {
       const id = uid("expense");
-      setState((s) => ({ ...s, claims: updateClaims(s.claims, role, action, DEMO_TODAY, id) }));
+      setState((s) => ({ ...s, claims: updateClaims(s.claims, role, action, s.workforce.today, id,s.workforce.people.map(p=>({id:p.id,managerId:p.manager}))) }));
     },
     applyLeave: (l) =>
       setState((s) => ({
@@ -148,12 +155,13 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     removeHoliday: (branch, id) => patchCalendar(branch, (c) => ({ ...c, holidays: c.holidays.filter((x) => x.id !== id) })),
     clock: (time) =>
       setState((s) => {
-        const open = s.attendance.find((a) => a.employeeId === DEMO_EMPLOYEE_ID && a.day === DEMO_TODAY);
-        if (!open) return { ...s, attendance: [...s.attendance, { employeeId: DEMO_EMPLOYEE_ID, day: DEMO_TODAY, checkIn: time }] };
+        const day=demoPunchDay(s,DEMO_EMPLOYEE_ID,time);
+        const open = s.attendance.find((a) => a.employeeId === DEMO_EMPLOYEE_ID && a.day === day);
+        if (!open) return { ...s, attendance: [...s.attendance, { employeeId: DEMO_EMPLOYEE_ID, day, checkIn: time }] };
         if (open.checkOut) return s;
         return {
           ...s,
-          attendance: s.attendance.map((a) => (a === open ? { ...a, checkOut: time < a.checkIn ? a.checkIn : time } : a)),
+          attendance: s.attendance.map((a) => (a === open ? { ...a, checkOut: day===s.workforce.today && time<a.checkIn?a.checkIn:time } : a)),
         };
       }),
     requestCorrection: (c) =>
@@ -189,6 +197,16 @@ export function useDemo() {
 
 /** The demo employee with their current tax choices applied. */
 export function useMe() {
-  const { myRegime, myDeclarations } = useDemo();
-  return { ...me, regime: myRegime, declarations: myDeclarations };
+  const { myRegime, myDeclarations,workforce } = useDemo();
+  const p=workforce.people.find(p=>p.id===me.id);
+  return { ...me, ...(p?{branch:p.branch,department:p.department,designation:p.designation,managerId:p.manager||undefined}:{}), regime: myRegime, declarations: myDeclarations };
+}
+
+export function useDirectory():Employee[]{
+ const {workforce,onboarding}=useDemo();
+ return workforce.people.filter(p=>!p.ended).map(p=>{
+ const previous=EMPLOYEES.find(e=>e.id===p.id);
+ const details=previous??{panMasked:"",aadhaarLast4:"",uan:"",bank:"",accountLast4:"",ifsc:"",monthlyGross:0,regime:"new" as const,declarations:{sec80C:0,sec80D:0},email:onboarding.people.find(e=>e.id===p.id)?.email??""};
+ return {...details,...p,state:BRANCHES.find(b=>b.name===p.branch)!.state,managerId:p.manager||undefined};
+ });
 }

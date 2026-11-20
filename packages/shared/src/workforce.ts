@@ -1,0 +1,1456 @@
+// Domain contract shared by the database-backed workspace and the standalone demo.
+export type WorkKind =
+  | "clearanceTemplate"
+  | "exit"
+  | "feedback"
+  | "shift"
+  | "accrual"
+  | "recruit"
+  | "probation"
+  | "transfer"
+  | "review"
+  | "ticket"
+  | "asset"
+  | "training"
+  | "position";
+export const workTitles: Record<WorkKind, string> = {
+  clearanceTemplate: "Clearance templates",
+  exit: "Exit clearance",
+  feedback: "Confidential exit feedback",
+  shift: "Shift roster",
+  accrual: "Leave ledger",
+  recruit: "Recruitment",
+  probation: "Probation",
+  transfer: "Transfers and promotions",
+  review: "Performance reviews",
+  ticket: "HR help desk",
+  asset: "Asset inventory",
+  training: "Skills and certification",
+  position: "Headcount planning",
+};
+export type WorkValues = Record<string, string>;
+export type WorkPerson = {
+  id: string;
+  name: string;
+  code: string;
+  joined: string;
+  manager: string;
+  branch: string;
+  department: string;
+  designation: string;
+  ended: string | null;
+};
+export type WorkOption = { id: string; name: string };
+export type WorkActor = {
+  role: "Admin" | "HR" | "Employee" | "Manager";
+  employeeId: string | null;
+  membershipId: string;
+};
+export type WorkEvent = {
+  action: string;
+  at: string;
+  actor: string;
+  values: WorkValues;
+};
+export type WorkRow = {
+  id: string;
+  kind: WorkKind;
+  status: string;
+  employeeId: string | null;
+  assignedId: string | null;
+  revision: number;
+  values: WorkValues;
+  history: WorkEvent[];
+};
+export type WorkData = {
+  today: string;
+  company: string;
+  people: WorkPerson[];
+  records: WorkRow[];
+  branches: WorkOption[];
+  departments: WorkOption[];
+  designations: WorkOption[];
+  hr: WorkOption[];
+  templates: WorkOption[];
+  policies: (WorkOption & { year: number; opening: number })[];
+  claims: {
+    id: string;
+    employeeId: string;
+    status: string;
+    paise: number;
+    owner: string;
+  }[];
+  issued: { employeeId: string; asset: string; item: string }[];
+  absences: {
+    employeeId: string;
+    policy: string;
+    status: string;
+    days: string[];
+  }[];
+  punches: {
+    employeeId: string;
+    day: string;
+    checkIn: string;
+    checkOut: string | null;
+  }[];
+};
+export type WorkCommand = {
+  action: string;
+  id: string;
+  revision: number;
+  values: WorkValues;
+};
+type FieldType =
+  | "text"
+  | "date"
+  | "number"
+  | "time"
+  | "person"
+  | "branch"
+  | "department"
+  | "designation"
+  | "hr"
+  | "policy"
+  | "template"
+  | "task"
+  | "handover"
+  | "report"
+  | "position"
+  | "shift"
+  | "asset"
+  | "clearanceTemplate"
+  | "choice";
+export type WorkField = {
+  key: string;
+  label: string;
+  type: FieldType;
+  optional?: boolean;
+  choices?: string[];
+};
+const f = (
+  key: string,
+  label: string,
+  type: FieldType = "text",
+  optional = false,
+): WorkField => ({ key, label, type, optional });
+const choice = (
+  key: string,
+  label: string,
+  ...choices: string[]
+): WorkField => ({ key, label, type: "choice", choices });
+const emp = f("person", "Employee", "person"),
+  day = f("day", "Date", "date"),
+  note = f("note", "Notes"),
+  due = f("due", "Due date", "date"),
+  name = f("name", "Name"),
+  branch = f("branch", "Branch", "branch"),
+  dept = f("department", "Department", "department"),
+  designation = f("designation", "Designation", "designation"),
+  manager = f("manager", "Reporting manager", "person", true);
+type Access =
+  "hr" | "own" | "lead" | "team" | "either" | "assigned" | "reader" | "member";
+type Spec = {
+  kind: WorkKind;
+  label: string;
+  access: Access;
+  fields: WorkField[];
+  from: string[];
+  to?: string;
+};
+const op = (
+  kind: WorkKind,
+  label: string,
+  access: Access,
+  fields: WorkField[],
+  from: string[],
+  to?: string,
+): Spec => ({ kind, label, access, fields, from, to });
+export const operations: Record<string, Spec> = {
+  checklist: op(
+    "clearanceTemplate",
+    "Create clearance template",
+    "hr",
+    [
+      name,
+      f("branch", "Branch", "branch", true),
+      f("department", "Department", "department", true),
+    ],
+    [],
+    "Active",
+  ),
+  checklistTask: op(
+    "clearanceTemplate",
+    "Add template task",
+    "hr",
+    [
+      name,
+      choice("role", "Owner", "Employee", "Manager", "HR"),
+      f("offset", "Days before final day", "number"),
+    ],
+    ["Active"],
+  ),
+  applyChecklist: op(
+    "exit",
+    "Apply clearance template",
+    "hr",
+    [f("checklist", "Checklist template", "clearanceTemplate")],
+    ["Confirmed"],
+  ),
+  resign: op(
+    "exit",
+    "Open exit case",
+    "either",
+    [
+      emp,
+      f("proposed", "Proposed last day", "date"),
+      f("notice", "Notice days", "number"),
+      note,
+    ],
+    [],
+    "Requested",
+  ),
+  confirmExit: op(
+    "exit",
+    "Confirm dates",
+    "hr",
+    [f("last", "Agreed last day", "date"), note],
+    ["Requested", "Confirmed"],
+    "Confirmed",
+  ),
+  cancelExit: op(
+    "exit",
+    "Cancel case",
+    "hr",
+    [note],
+    ["Requested", "Confirmed"],
+    "Cancelled",
+  ),
+  task: op(
+    "exit",
+    "Assign clearance task",
+    "hr",
+    [
+      name,
+      choice("role", "Owner", "Employee", "Manager", "HR", "Named owner"),
+      f("owner", "Named owner", "person", true),
+      f("offset", "Days before final day", "number"),
+    ],
+    ["Confirmed"],
+  ),
+  finishTask: op(
+    "exit",
+    "Complete clearance task",
+    "reader",
+    [f("task", "Assigned task", "task")],
+    ["Confirmed"],
+  ),
+  handover: op(
+    "exit",
+    "Assign handover",
+    "either",
+    [
+      name,
+      f("owner", "Successor", "person"),
+      f("link", "Document URL", "text", true),
+    ],
+    ["Confirmed"],
+  ),
+  acknowledge: op(
+    "exit",
+    "Acknowledge handover",
+    "reader",
+    [f("handover", "Project", "handover")],
+    ["Confirmed"],
+  ),
+  reassign: op(
+    "exit",
+    "Reassign direct report",
+    "hr",
+    [
+      f("report", "Direct report", "report"),
+      f("manager", "New manager", "person"),
+    ],
+    ["Confirmed"],
+  ),
+  returnAsset: op(
+    "exit",
+    "Record asset clearance",
+    "hr",
+    [
+      f("asset", "Issued asset", "asset"),
+      choice("result", "Disposition", "Returned", "Approved exception"),
+      note,
+    ],
+    ["Confirmed"],
+  ),
+  letter: op(
+    "exit",
+    "Issue document version",
+    "hr",
+    [
+      choice(
+        "document",
+        "Document",
+        "Relieving letter",
+        "Experience letter",
+        "Clearance summary",
+      ),
+    ],
+    ["Confirmed"],
+  ),
+  closeExit: op(
+    "exit",
+    "Close company access",
+    "hr",
+    [note],
+    ["Confirmed"],
+    "Closed",
+  ),
+  feedback: op(
+    "feedback",
+    "Submit optional feedback",
+    "own",
+    [f("note", "Feedback visible to HR/Admin and you")],
+    [],
+    "Received",
+  ),
+  roster: op(
+    "shift",
+    "Publish shift",
+    "team",
+    [
+      emp,
+      day,
+      f("start", "Start (IST)", "time"),
+      f("end", "End (IST)", "time"),
+    ],
+    [],
+    "Published",
+  ),
+  swap: op(
+    "shift",
+    "Request shift swap",
+    "own",
+    [f("other", "Other published shift", "shift")],
+    ["Published"],
+    "Swap requested",
+  ),
+  consent: op(
+    "shift",
+    "Consent to swap",
+    "assigned",
+    [],
+    ["Swap requested"],
+    "Awaiting approval",
+  ),
+  declineSwap: op(
+    "shift",
+    "Decline swap",
+    "assigned",
+    [],
+    ["Swap requested"],
+    "Published",
+  ),
+  decideSwap: op(
+    "shift",
+    "Approve swap",
+    "team",
+    [],
+    ["Awaiting approval"],
+    "Published",
+  ),
+  rejectSwap: op(
+    "shift",
+    "Reject swap",
+    "team",
+    [],
+    ["Awaiting approval"],
+    "Published",
+  ),
+  accrual: op(
+    "accrual",
+    "Set annual accrual rule",
+    "hr",
+    [
+      emp,
+      f("policy", "Leave policy", "policy"),
+      f("monthly", "Days earned per completed month", "number"),
+      f("cap", "Maximum prior-year carry", "number"),
+      f("expiry", "Carry expiry date", "date"),
+    ],
+    [],
+    "Active",
+  ),
+  candidate: op(
+    "recruit",
+    "Add candidate",
+    "hr",
+    [
+      name,
+      f("position", "Open position", "position"),
+      f("email", "Candidate email"),
+    ],
+    [],
+    "Applied",
+  ),
+  interview: op(
+    "recruit",
+    "Record interview",
+    "hr",
+    [day, note],
+    ["Applied", "Interview"],
+    "Interview",
+  ),
+  offer: op(
+    "recruit",
+    "Issue offer",
+    "hr",
+    [day, note],
+    ["Interview"],
+    "Offered",
+  ),
+  hire: op(
+    "recruit",
+    "Record acceptance and onboard",
+    "hr",
+    [
+      f("code", "Employee code"),
+      f("joined", "Joining date", "date"),
+      manager,
+      f("template", "Onboarding template", "template"),
+    ],
+    ["Offered"],
+    "Hired",
+  ),
+  reject: op(
+    "recruit",
+    "Close application",
+    "hr",
+    [note],
+    ["Applied", "Interview", "Offered"],
+    "Closed",
+  ),
+  probation: op(
+    "probation",
+    "Start probation",
+    "hr",
+    [emp, due],
+    [],
+    "Under review",
+  ),
+  recommendation: op(
+    "probation",
+    "Submit manager review",
+    "lead",
+    [note],
+    ["Under review", "Extended"],
+    "Reviewed",
+  ),
+  extend: op(
+    "probation",
+    "Extend probation",
+    "hr",
+    [due, note],
+    ["Reviewed"],
+    "Extended",
+  ),
+  confirm: op(
+    "probation",
+    "Confirm employment",
+    "hr",
+    [day, note],
+    ["Reviewed"],
+    "Confirmed",
+  ),
+  transfer: op(
+    "transfer",
+    "Schedule assignment change",
+    "hr",
+    [emp, day, branch, dept, designation, manager],
+    [],
+    "Scheduled",
+  ),
+  cancelTransfer: op(
+    "transfer",
+    "Cancel scheduled change",
+    "hr",
+    [note],
+    ["Scheduled", "Needs review"],
+    "Cancelled",
+  ),
+  review: op(
+    "review",
+    "Launch performance review",
+    "hr",
+    [
+      emp,
+      f("cycle", "Cycle"),
+      f("goals", "Role-specific goals"),
+      due,
+      f("release", "Earliest release date", "date"),
+    ],
+    [],
+    "Self-assessment",
+  ),
+  selfReview: op(
+    "review",
+    "Submit self-assessment",
+    "own",
+    [note],
+    ["Self-assessment"],
+    "Manager review",
+  ),
+  managerReview: op(
+    "review",
+    "Record manager feedback",
+    "lead",
+    [note],
+    ["Manager review"],
+    "Awaiting release",
+  ),
+  release: op(
+    "review",
+    "Release feedback",
+    "hr",
+    [],
+    ["Awaiting release"],
+    "Released",
+  ),
+  ticket: op(
+    "ticket",
+    "Open HR case",
+    "own",
+    [
+      f("name", "Subject"),
+      choice(
+        "category",
+        "Category",
+        "Workplace",
+        "Payroll",
+        "Leave",
+        "Sensitive",
+      ),
+      f("handler", "Designated HR recipient", "hr"),
+      note,
+    ],
+    [],
+    "Open",
+  ),
+  reply: op("ticket", "Add reply", "reader", [note], ["Open"]),
+  resolveTicket: op(
+    "ticket",
+    "Resolve case",
+    "reader",
+    [note],
+    ["Open"],
+    "Resolved",
+  ),
+  stock: op(
+    "asset",
+    "Register asset",
+    "hr",
+    [f("assetTag", "Asset reference"), name],
+    [],
+    "In stock",
+  ),
+  issue: op("asset", "Assign asset", "hr", [emp], ["In stock"], "Assigned"),
+  receive: op("asset", "Record return", "hr", [note], ["Assigned"], "In stock"),
+  repair: op(
+    "asset",
+    "Send for repair",
+    "hr",
+    [note],
+    ["In stock"],
+    "In repair",
+  ),
+  repaired: op(
+    "asset",
+    "Return from repair",
+    "hr",
+    [note],
+    ["In repair"],
+    "In stock",
+  ),
+  requirement: op(
+    "training",
+    "Set role qualification",
+    "hr",
+    [designation, f("skill", "Required skill or certification")],
+    [],
+    "Required",
+  ),
+  train: op(
+    "training",
+    "Assign training or renewal",
+    "team",
+    [emp, f("skill", "Qualification"), due],
+    [],
+    "Assigned",
+  ),
+  renew: op(
+    "training",
+    "Assign renewal",
+    "team",
+    [due],
+    ["Certified"],
+    "Assigned",
+  ),
+  certify: op(
+    "training",
+    "Verify certification",
+    "team",
+    [
+      f("reference", "Certificate reference"),
+      f("expiry", "Expiry date", "date"),
+    ],
+    ["Assigned"],
+    "Certified",
+  ),
+  position: op(
+    "position",
+    "Approve staffing level",
+    "hr",
+    [branch, dept, designation, f("seats", "Approved positions", "number")],
+    [],
+    "Approved",
+  ),
+  vacancy: op(
+    "position",
+    "Open recruitment requisition",
+    "hr",
+    [note],
+    ["Approved"],
+    "Recruiting",
+  ),
+};
+export const workHR = (a: WorkActor) => a.role === "HR" || a.role === "Admin";
+const employee = (d: WorkData, id: string | null | undefined) =>
+  d.people.find((p) => p.id === id);
+export const shiftDate = (day: string, n: number) =>
+  new Date(Date.parse(day) + n * 86400000).toISOString().slice(0, 10);
+export function exitTasks(r: WorkRow) {
+  return r.history.flatMap((e, i) =>
+    e.action === "task"
+      ? [
+          {
+            name: e.values.name!,
+            role: e.values.role!,
+            owner: e.values.owner ?? "",
+            id: String(i),
+            due:
+              r.history.find(
+                (h) => h.action === "finishTask" && h.values.task === String(i),
+              )?.values.due ??
+              shiftDate(r.values.last!, -Number(e.values.offset)),
+            done: r.history.some(
+              (h) => h.action === "finishTask" && h.values.task === String(i),
+            ),
+          },
+        ]
+      : [],
+  );
+}
+export function handovers(r: WorkRow) {
+  return r.history.flatMap((e, i) =>
+    e.action === "handover"
+      ? [
+          {
+            name: e.values.name!,
+            owner: e.values.owner!,
+            link: e.values.link ?? "",
+            id: String(i),
+            done: r.history.some(
+              (h) =>
+                h.action === "acknowledge" && h.values.handover === String(i),
+            ),
+          },
+        ]
+      : [],
+  );
+}
+export function pendingAssets(d: WorkData, r: WorkRow) {
+  const inventory = d.records.filter((i) => i.kind === "asset");
+  const assets = new Map(
+    d.issued
+      .filter(
+        (i) =>
+          i.employeeId === r.employeeId &&
+          !inventory.some((a) => a.values.assetTag === i.asset),
+      )
+      .map((i) => [i.asset, i.item]),
+  );
+  for (const item of inventory.filter(
+    (a) => a.employeeId === r.employeeId && a.status === "Assigned",
+  ))
+    assets.set(item.values.assetTag!, item.values.name!);
+  return [...assets]
+    .filter(
+      ([tag]) =>
+        inventory.some(
+          (a) =>
+            a.values.assetTag === tag &&
+            a.status === "Assigned" &&
+            a.employeeId === r.employeeId,
+        ) ||
+        !r.history.some(
+          (h) => h.action === "returnAsset" && h.values.asset === tag,
+        ),
+    )
+    .map(([id, name]) => ({ id, name }));
+}
+export const pendingClaims = (d: WorkData, id: string | null) =>
+  d.claims.filter((c) => c.employeeId === id && c.status !== "Reimbursed");
+export function clearance(d: WorkData, r: WorkRow) {
+  return [
+    ...exitTasks(r)
+      .filter((t) => !t.done)
+      .map((t) => "Task: " + t.name),
+    ...handovers(r)
+      .filter((t) => !t.done)
+      .map((t) => "Handover: " + t.name),
+    ...pendingAssets(d, r).map((a) => "Asset: " + a.id),
+    ...d.people
+      .filter((p) => p.manager === r.employeeId && !p.ended)
+      .map((p) => "Reassign " + p.name),
+    ...pendingClaims(d, r.employeeId).map(
+      (c) => "Expense " + c.id + " · " + c.status,
+    ),
+  ];
+}
+export function filled(d: WorkData, r: WorkRow) {
+  return d.people.filter(
+    (p) =>
+      !p.ended &&
+      p.branch === r.values.branch &&
+      p.department === r.values.department &&
+      p.designation === r.values.designation,
+  ).length;
+}
+export function shiftRange(v: WorkValues) {
+  const start = Date.parse(v.day + "T" + v.start + ":00+05:30");
+  let end = Date.parse(v.day + "T" + v.end + ":00+05:30");
+  if (end <= start) end += 86400000;
+  return { start, end };
+}
+export function maySee(a: WorkActor, r: WorkRow, d: WorkData) {
+  const own = !!a.employeeId && a.employeeId === r.employeeId,
+    lead =
+      a.role === "Manager" &&
+      !!a.employeeId &&
+      employee(d, r.employeeId)?.manager === a.employeeId;
+  if (r.kind === "ticket") return own || r.values.handler === a.membershipId;
+  if (workHR(a)) return true;
+  if (r.kind === "feedback") return own;
+  if (
+    r.kind === "recruit" ||
+    r.kind === "position" ||
+    r.kind === "clearanceTemplate"
+  )
+    return false;
+  if (r.kind === "training" && r.status === "Required") return true;
+  if (r.kind === "shift")
+    return (
+      own ||
+      lead ||
+      (a.employeeId === r.assignedId && !!a.employeeId) ||
+      employee(d, a.employeeId)?.branch === employee(d, r.employeeId)?.branch
+    );
+  return (
+    own ||
+    lead ||
+    (!!a.employeeId &&
+      r.kind === "exit" &&
+      (handovers(r).some((h) => h.owner === a.employeeId) ||
+        exitTasks(r).some((t) => t.owner === a.employeeId)))
+  );
+}
+export function authorized(
+  access: Access,
+  a: WorkActor,
+  p: WorkPerson | undefined,
+  r?: WorkRow,
+) {
+  const hr = workHR(a),
+    own = !!a.employeeId && a.employeeId === p?.id,
+    lead =
+      !!a.employeeId && a.role === "Manager" && a.employeeId === p?.manager;
+  switch (access) {
+    case "hr":
+      return hr;
+    case "own":
+      return own;
+    case "lead":
+      return lead || (hr && (!p?.manager || a.employeeId === p.manager));
+    case "team":
+      return hr || lead;
+    case "either":
+      return hr || own;
+    case "assigned":
+      return !!a.employeeId && a.employeeId === r?.assignedId;
+    case "reader":
+      return true;
+    case "member":
+      return !!a.employeeId;
+  }
+}
+export function taskOwner(
+  t: { role: string; owner: string },
+  a: WorkActor,
+  p: WorkPerson | undefined,
+) {
+  return t.role === "Named owner"
+    ? a.employeeId === t.owner
+    : authorized(
+        t.role === "HR" ? "hr" : t.role === "Manager" ? "lead" : "own",
+        a,
+        p,
+      );
+}
+export function exitDocument(d: WorkData, r: WorkRow, kind: string) {
+  const p = employee(d, r.employeeId)!;
+  const lines = [
+    d.company,
+    kind,
+    p.name + " · " + p.code,
+    "Service: " + p.joined + " to " + r.values.last,
+    "Designation: " +
+      (d.designations.find((x) => x.id === p.designation)?.name ??
+        p.designation),
+  ];
+  if (kind === "Clearance summary")
+    lines.push(
+      ...(clearance(d, r).length
+        ? clearance(d, r)
+        : ["All clearance items complete."]),
+    );
+  else
+    lines.push(
+      kind === "Experience letter"
+        ? "This records the employment and role shown above."
+        : "Employment ends on the confirmed last working day shown above.",
+    );
+  return lines.join("\n");
+}
+export function optionsFor(
+  field: WorkField,
+  d: WorkData,
+  a: WorkActor,
+  r?: WorkRow,
+): WorkOption[] {
+  switch (field.type) {
+    case "choice":
+      return field.choices!.map((name) => ({ id: name, name }));
+    case "person":
+      return d.people.filter((p) => !p.ended);
+    case "report":
+      return d.people.filter((p) => p.manager === r?.employeeId && !p.ended);
+    case "branch":
+      return d.branches;
+    case "department":
+      return d.departments;
+    case "designation":
+      return d.designations;
+    case "hr":
+      return d.hr;
+    case "policy":
+      return d.policies;
+    case "template":
+      return d.templates;
+    case "task":
+      return r
+        ? exitTasks(r)
+            .filter(
+              (t) => !t.done && taskOwner(t, a, employee(d, r.employeeId)),
+            )
+            .map((t) => ({ id: t.id, name: String(t.name) }))
+        : [];
+    case "handover":
+      return r
+        ? handovers(r)
+            .filter((h) => !h.done && h.owner === a.employeeId)
+            .map((h) => ({ id: h.id, name: String(h.name) }))
+        : [];
+    case "clearanceTemplate": {
+      const p = employee(d, r?.employeeId);
+      return d.records
+        .filter(
+          (t) =>
+            t.kind === "clearanceTemplate" &&
+            (!t.values.branch || t.values.branch === p?.branch) &&
+            (!t.values.department || t.values.department === p?.department),
+        )
+        .map((t) => ({ id: t.id, name: t.history[0]!.values.name! }));
+    }
+    case "asset":
+      return r ? pendingAssets(d, r) : [];
+    case "position":
+      return d.records
+        .filter(
+          (x) =>
+            x.kind === "position" &&
+            x.status === "Recruiting" &&
+            filled(d, x) < Number(x.values.seats),
+        )
+        .map((x) => ({
+          id: x.id,
+          name: [
+            d.branches.find((b) => b.id === x.values.branch)?.name,
+            d.departments.find((b) => b.id === x.values.department)?.name,
+            d.designations.find((b) => b.id === x.values.designation)?.name,
+          ].join(" · "),
+        }));
+    case "shift":
+      return d.records
+        .filter(
+          (x) =>
+            x.kind === "shift" &&
+            x.status === "Published" &&
+            x.employeeId !== r?.employeeId &&
+            x.values.day! >= d.today &&
+            employee(d, x.employeeId)?.branch ===
+              employee(d, r?.employeeId)?.branch,
+        )
+        .map((x) => ({
+          id: x.id,
+          name:
+            employee(d, x.employeeId)?.name +
+            " · " +
+            x.values.day +
+            " " +
+            x.values.start +
+            "–" +
+            x.values.end,
+        }));
+    default:
+      return [];
+  }
+}
+function check(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+export function managerValid(d: WorkData, id: string, next: string) {
+  const seen = new Set([id]);
+  let cursor = next;
+  while (cursor) {
+    check(!seen.has(cursor), "Reporting line would create a cycle");
+    seen.add(cursor);
+    const p = employee(d, cursor);
+    check(p && !p.ended, "Choose an active manager");
+    cursor = p.manager;
+  }
+}
+export function ledger(
+  d: Pick<WorkData, "today" | "records" | "policies" | "absences" | "people">,
+  id: string,
+  policyId: string,
+  asOf = d.today,
+): { day: string; label: string; days: number }[] {
+  const pol = d.policies.find((p) => p.id === policyId);
+  if (!pol) return [];
+  const rule = d.records.find(
+    (r) =>
+      r.kind === "accrual" &&
+      r.employeeId === id &&
+      r.values.policy === policyId,
+  );
+  const start = pol.year + "-01-01",
+    end = pol.year + "-12-31",
+    entries = [{ day: start, label: "Opening allocation", days: pol.opening }];
+  if (rule) {
+    const prev = d.policies.find(
+      (p) => p.name === pol.name && p.year === pol.year - 1,
+    );
+    const prior = prev
+      ? ledger(d, id, prev.id, pol.year - 1 + "-12-31").reduce(
+          (s, e) => s + e.days,
+          0,
+        )
+      : 0;
+    const carry = Math.min(Math.max(0, prior), Number(rule.values.cap));
+    if (carry)
+      entries.push({ day: start, label: "Carry-forward", days: carry });
+    const join = d.people.find((p) => p.id === id)?.joined ?? start;
+    for (let month = 1; month <= 12; month++) {
+      const last = new Date(Date.UTC(pol.year, month, 0))
+        .toISOString()
+        .slice(0, 10);
+      if (last <= asOf && last <= d.today && join <= last.slice(0, 8) + "01")
+        entries.push({
+          day: last,
+          label: "Monthly accrual",
+          days: Number(rule.values.monthly),
+        });
+    }
+    if (carry && rule.values.expiry! < asOf) {
+      const used = d.absences
+        .filter(
+          (l) =>
+            l.employeeId === id &&
+            l.policy === policyId &&
+            ["Pending", "Approved"].includes(l.status),
+        )
+        .flatMap((l) => l.days)
+        .filter((day) => day <= rule.values.expiry!).length;
+      entries.push({
+        day: shiftDate(rule.values.expiry!, 1),
+        label: "Unused carry expired",
+        days: -Math.max(carry - used, 0),
+      });
+    }
+  }
+  for (const l of d.absences.filter(
+    (l) =>
+      l.employeeId === id &&
+      l.policy === policyId &&
+      ["Approved", "Pending"].includes(l.status),
+  ))
+    for (const day of l.days.filter((day) => day <= end))
+      entries.push({
+        day,
+        label: l.status === "Approved" ? "Leave taken" : "Reserved leave",
+        days: -1,
+      });
+  return entries.sort((a, b) => a.day.localeCompare(b.day));
+}
+export type WorkResult = { row: WorkRow; other?: WorkRow };
+export function transition(
+  d: WorkData,
+  a: WorkActor,
+  c: WorkCommand,
+  now: string,
+): WorkResult {
+  const spec = Object.hasOwn(operations, c.action)
+    ? operations[c.action]
+    : undefined;
+  check(spec, "Unknown operation");
+  const old = d.records.find((r) => r.id === c.id);
+  check(
+    c.revision === (old?.revision ?? 0) &&
+      (!old
+        ? !spec.from.length
+        : spec.kind === old.kind && spec.from.includes(old.status)),
+    "Record changed. Refresh and try again.",
+  );
+  if (old) check(maySee(a, old, d), "Record unavailable");
+  const v: WorkValues = {};
+  for (const field of spec.fields) {
+    const val = (c.values[field.key] ?? "").trim();
+    check(val.length <= 1200, field.label + " is too long");
+    if (!val && field.optional) {
+      v[field.key] = "";
+      continue;
+    }
+    check(val, field.label + " is required");
+    if (field.type === "date")
+      check(
+        /^\d{4}-\d\d-\d\d$/.test(val) &&
+          Number.isFinite(Date.parse(val)) &&
+          new Date(val).toISOString().slice(0, 10) === val,
+        "Invalid date",
+      );
+    else if (field.type === "time")
+      check(/^([01]\d|2[0-3]):[0-5]\d$/.test(val), "Invalid time");
+    else if (field.type === "number")
+      check(/^\d{1,4}$/.test(val), "Enter a nonnegative whole number");
+    else if (field.type !== "text")
+      check(
+        optionsFor(field, d, a, old).some((i) => i.id === val),
+        "Invalid " + field.label,
+      );
+    v[field.key] = val;
+  }
+  let subject: string | null =
+    old?.employeeId ??
+    v.person ??
+    (["feedback", "ticket"].includes(c.action) ? a.employeeId : null);
+  const p = employee(d, subject);
+  check(authorized(spec.access, a, p, old), "You cannot perform this action");
+  const values = { ...old?.values, ...v };
+  const extra: WorkEvent[] = [];
+  let assigned = old?.assignedId ?? null,
+    other: WorkRow | undefined;
+  const event: WorkEvent = {
+    action: c.action,
+    actor: a.membershipId,
+    at: now,
+    values: { ...v },
+  };
+  const active = (kind: WorkKind, predicate: (r: WorkRow) => boolean) =>
+    d.records.some((r) => r.kind === kind && r.id !== c.id && predicate(r));
+  const conflictShift = (
+    who: string | null,
+    shift: WorkValues,
+    exclude: string[],
+  ) => {
+    const target = shiftRange(shift);
+    return d.records.some(
+      (r) =>
+        r.kind === "shift" &&
+        r.employeeId === who &&
+        !exclude.includes(r.id) &&
+        shiftRange(r.values).start < target.end &&
+        shiftRange(r.values).end > target.start,
+    );
+  };
+  switch (c.action) {
+    case "finishTask":
+      event.values.due = exitTasks(old!).find((t) => t.id === v.task)!.due;
+      break;
+    case "applyChecklist": {
+      const t = d.records.find((x) => x.id === v.checklist)!;
+      check(
+        !old!.history.some(
+          (e) => e.action === "applyChecklist" && e.values.checklist === t.id,
+        ),
+        "Template already applied",
+      );
+      const tasks = t.history.filter((e) => e.action === "checklistTask");
+      check(tasks.length, "Add tasks to the template first");
+      check(
+        p?.manager || !tasks.some((e) => e.values.role === "Manager"),
+        "Assign a reporting manager first",
+      );
+      extra.push(
+        ...tasks.map((t) => ({
+          ...event,
+          action: "task",
+          values: { ...t.values },
+        })),
+      );
+      break;
+    }
+    case "checklistTask":
+      values.name = old!.values.name!;
+      break;
+    case "task":
+      if (v.role !== "Named owner") event.values.owner = "";
+      check(v.role !== "Named owner" || v.owner, "Choose an owner");
+      check(
+        v.role !== "Manager" || p?.manager,
+        "Assign a reporting manager first",
+      );
+      break;
+    case "resign":
+      check(
+        !active(
+          "exit",
+          (r) =>
+            r.employeeId === subject &&
+            !["Cancelled", "Closed"].includes(r.status),
+        ),
+        "An exit is already open",
+      );
+      check(v.proposed! >= p!.joined, "Date precedes joining");
+      break;
+    case "confirmExit":
+      check(v.last! >= p!.joined, "Date precedes joining");
+      break;
+
+    case "handover":
+      check(v.owner !== subject, "Choose a successor");
+      if (v.link) check(/^https?:\/\//i.test(v.link), "Use an HTTP(S) link");
+      break;
+    case "reassign":
+      managerValid(d, v.report!, v.manager!);
+      check(v.manager !== subject, "Choose a continuing manager");
+      break;
+    case "letter":
+      event.values.text = exitDocument(d, old!, v.document!);
+      event.values.version = String(
+        1 +
+          old!.history.filter(
+            (h) => h.action === "letter" && h.values.document === v.document,
+          ).length,
+      );
+      break;
+    case "closeExit":
+      check(
+        !clearance(d, old!).length,
+        "Resolve the outstanding clearance items",
+      );
+      check(old!.values.last! <= d.today, "Last working day has not arrived");
+      check(
+        subject !== a.employeeId,
+        "Another HR administrator must close your access",
+      );
+      break;
+    case "feedback":
+      check(
+        d.records.some(
+          (r) =>
+            r.kind === "exit" &&
+            r.employeeId === subject &&
+            !["Cancelled", "Closed"].includes(r.status),
+        ),
+        "An open exit case is required",
+      );
+      break;
+    case "roster":
+      check(
+        v.start !== v.end && !conflictShift(subject, v, []),
+        "Shift overlaps an assignment or has zero length",
+      );
+      break;
+    case "swap":
+      check(
+        shiftRange(old!.values).start > Date.parse(now) &&
+          shiftRange(d.records.find((r) => r.id === v.other)!.values).start >
+            Date.parse(now),
+        "Past shifts cannot be swapped",
+      );
+      assigned = d.records.find((r) => r.id === v.other)!.employeeId;
+      break;
+    case "decideSwap": {
+      const s = d.records.find((r) => r.id === old!.values.other);
+      check(
+        s?.status === "Published" && s.employeeId === assigned,
+        "Requested shift changed",
+      );
+      check(
+        authorized("team", a, employee(d, s.employeeId)),
+        "Both assignments must be in your review scope",
+      );
+      check(
+        shiftRange(old!.values).start > Date.parse(now) &&
+          shiftRange(s.values).start > Date.parse(now) &&
+          !conflictShift(subject, s.values, [old!.id, s.id]) &&
+          !conflictShift(assigned, old!.values, [old!.id, s.id]),
+        "Swap expired or overlaps another shift",
+      );
+      other = {
+        ...s,
+        employeeId: subject,
+        revision: s.revision + 1,
+        history: [
+          ...s.history,
+          { ...event, values: { from: assigned!, to: subject! } },
+        ],
+      };
+      subject = assigned;
+      assigned = null;
+      break;
+    }
+    case "rejectSwap":
+    case "declineSwap":
+      assigned = null;
+      break;
+    case "accrual":
+      check(
+        !active(
+          "accrual",
+          (r) => r.employeeId === subject && r.values.policy === v.policy,
+        ),
+        "Rule already configured",
+      );
+      check(
+        v.expiry!.startsWith(
+          String(d.policies.find((x) => x.id === v.policy)!.year),
+        ),
+        "Expiry must be in policy year",
+      );
+      break;
+    case "candidate":
+      check(
+        /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email!),
+        "Invalid candidate email",
+      );
+      break;
+    case "hire": {
+      const pos = d.records.find((r) => r.id === old!.values.position)!;
+      check(filled(d, pos) < Number(pos.values.seats), "Position is filled");
+      check(
+        /^[A-Za-z0-9_-]{1,30}$/.test(v.code!) &&
+          !d.people.some((p) => p.code === v.code),
+        "Employee code is unavailable",
+      );
+      break;
+    }
+    case "extend":
+      check(v.due! > old!.values.due!, "Choose a later deadline");
+      break;
+    case "transfer":
+      check(v.day! >= d.today, "Use today or a future effective date");
+      managerValid(d, subject!, v.manager!);
+      check(
+        !active(
+          "transfer",
+          (r) => r.employeeId === subject && r.status === "Scheduled",
+        ),
+        "An assignment change is already scheduled",
+      );
+      Object.assign(event.values, {
+        previousBranch: p!.branch,
+        previousDepartment: p!.department,
+        previousDesignation: p!.designation,
+        previousManager: p!.manager,
+      });
+      break;
+    case "review":
+      check(
+        v.release! >= v.due!,
+        "Release date must follow the review deadline",
+      );
+      break;
+    case "release":
+      check(
+        d.today >= old!.values.release!,
+        "Feedback release date has not arrived",
+      );
+      break;
+    case "resolveTicket":
+      check(
+        old!.values.handler === a.membershipId,
+        "Only the designated recipient can resolve this case",
+      );
+      break;
+    case "stock":
+      check(
+        !active(
+          "asset",
+          (r) => r.values.assetTag!.toLowerCase() === v.assetTag!.toLowerCase(),
+        ) &&
+          !d.issued.some(
+            (i) => i.asset.toLowerCase() === v.assetTag!.toLowerCase(),
+          ),
+        "Asset reference already exists",
+      );
+      break;
+    case "issue":
+      subject = v.person!;
+      break;
+    case "receive":
+      subject = null;
+      break;
+    case "certify":
+      check(v.expiry! >= d.today, "Certificate is expired");
+      break;
+    case "position":
+      check(
+        Number(v.seats) > 0 &&
+          !active(
+            "position",
+            (r) =>
+              r.values.branch === v.branch &&
+              r.values.department === v.department &&
+              r.values.designation === v.designation,
+          ),
+        "Choose a distinct staffing group and positive headcount",
+      );
+      break;
+    case "vacancy":
+      check(
+        filled(d, old!) < Number(old!.values.seats),
+        "No unfilled positions",
+      );
+      break;
+  }
+  return {
+    row: {
+      id: c.id,
+      kind: spec.kind,
+      status: spec.to ?? old!.status,
+      employeeId: subject,
+      assignedId: assigned,
+      revision: c.revision + 1,
+      values,
+      history: [...(old?.history ?? []), event, ...extra],
+    },
+    other,
+  };
+}
+export function projectWork(d: WorkData, a: WorkActor): WorkData {
+  const lead = (id: string) =>
+    !!a.employeeId &&
+    a.role === "Manager" &&
+    employee(d, id)?.manager === a.employeeId;
+  const full = (id: string) => workHR(a) || id === a.employeeId || lead(id);
+  const records = d.records
+    .filter((r) => maySee(a, r, d))
+    .map((r) => {
+      if (
+        r.kind === "review" &&
+        r.employeeId === a.employeeId &&
+        r.status !== "Released" &&
+        !workHR(a)
+      ) {
+        const values = { ...r.values };
+        delete values.note;
+        return {
+          ...r,
+          values,
+          history: r.history.filter((e) => e.action !== "managerReview"),
+        };
+      }
+      if (r.kind === "exit" && !full(r.employeeId!)) {
+        // Preserve event indices used by acknowledgement commands, while redacting unrelated work.
+        const history = r.history.map((e) =>
+          e.values.owner === a.employeeId || e.actor === a.membershipId
+            ? e
+            : { action: "private", actor: "", at: e.at, values: {} },
+        );
+        return { ...r, values: { last: r.values.last ?? "" }, history };
+      }
+      return r;
+    });
+  return {
+    ...d,
+    records,
+    people: d.people
+      .filter(
+        (p) =>
+          full(p.id) ||
+          p.id === employee(d, a.employeeId)?.manager ||
+          p.branch === employee(d, a.employeeId)?.branch ||
+          records.some((r) => r.employeeId === p.id || r.assignedId === p.id),
+      )
+      .map((p) => (full(p.id) ? p : { ...p, joined: "", code: "" })),
+    issued: d.issued.filter((i) => full(i.employeeId)),
+    claims: d.claims.filter((c) => full(c.employeeId)),
+    absences: d.absences.filter((l) => full(l.employeeId)),
+    punches: d.punches.filter((s) => full(s.employeeId)),
+    templates: workHR(a) ? d.templates : [],
+  };
+}
+
+// Onboarding and inventory record the same physical handover in one transaction.
+export function handoverAsset(
+  records: WorkRow[],
+  tag: string,
+  item: string,
+  person: string,
+  actor: string,
+  at: string,
+  newId: string,
+): WorkRow {
+  const previous = records.find(
+    (r) =>
+      r.kind === "asset" &&
+      r.values.assetTag?.toLowerCase() === tag.toLowerCase(),
+  );
+  check(
+    !previous || previous.status === "In stock",
+    "Asset is unavailable for handover",
+  );
+  return {
+    id: previous?.id ?? newId,
+    kind: "asset",
+    status: "Assigned",
+    assignedId: null,
+    employeeId: person,
+    revision: (previous?.revision ?? 0) + 1,
+    values: {
+      assetTag: previous?.values.assetTag ?? tag,
+      name: previous?.values.name ?? item,
+      person,
+    },
+    history: [
+      ...(previous?.history ?? []),
+      {
+        action: "Onboarding handover",
+        actor,
+        at,
+        values: { assetTag: tag, name: item, person },
+      },
+    ],
+  };
+}

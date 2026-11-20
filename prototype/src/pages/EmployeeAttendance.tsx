@@ -1,23 +1,27 @@
 import { useState, type FormEvent } from "react";
 import { Button, PageHeader, Pill, Section, fmtDate, fmtDay, statusTone } from "../components/ui";
-import { DEMO_TODAY, useDemo, useMe } from "../lib/store";
+import {demoPunchDay} from "../workforce/adapter";
+import {shiftDate} from "../workforce/model";
+import { useDemo, useMe } from "../lib/store";
 import { clock, duration, eachDay, nowIST } from "../lib/time";
 
 export function EmployeeAttendance() {
   const me = useMe();
-  const { attendance, corrections, calendars, leaves, clock: punch, requestCorrection } = useDemo();
+  const store=useDemo(), DEMO_TODAY=store.workforce.today;
+  const { attendance, corrections, calendars, leaves, clock: punch, requestCorrection } = store;
   const cal = calendars[me.branch];
-  const today = attendance.find((a) => a.employeeId === me.id && a.day === DEMO_TODAY);
+  const today = attendance.find((a) => a.employeeId === me.id && a.day === demoPunchDay(store,me.id,nowIST()));
   const mine = corrections.filter((c) => c.employeeId === me.id);
 
-  const week = eachDay("2026-11-16", DEMO_TODAY).reverse();
+  const week = eachDay(shiftDate(DEMO_TODAY,-6), DEMO_TODAY).reverse();
 
   const [day, setDay] = useState("2026-11-18");
   const [inT, setIn] = useState("09:00");
   const [outT, setOut] = useState("18:00");
   const [reason, setReason] = useState("");
   const [sent, setSent] = useState(false);
-  const error = outT <= inT ? "Check-out must be after check-in." : day > DEMO_TODAY ? "You can only correct past days." : "";
+  const night=store.workforce.records.some(r=>r.kind==="shift"&&r.employeeId===me.id&&r.values.day===day&&r.values.start>r.values.end&&inT>=r.values.start&&outT<=r.values.end);
+  const error = outT === inT || outT < inT && !night ? "Check-out must be after check-in." : day > DEMO_TODAY ? "You can only correct past days." : "";
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

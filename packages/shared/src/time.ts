@@ -77,6 +77,7 @@ export const indiaDay = (date: Date) =>
   new Date(date.getTime() + 19800000).toISOString().slice(0, 10);
 export type TimeAction = z.infer<typeof timeCommand>;
 export interface TimeView {
+  clockDay?: string;
   today: string;
   branchId: string | null;
   branches: {

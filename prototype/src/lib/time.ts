@@ -45,6 +45,6 @@ export function duration(from: string, to: string): string {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   });
-  const mins = Math.max(0, b - a);
+  const mins = (b - a + 1440) % 1440;
   return `${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, "0")}m`;
 }

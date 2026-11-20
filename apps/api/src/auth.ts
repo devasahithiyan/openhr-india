@@ -48,7 +48,11 @@ export class SessionGuard implements CanActivate {
       where: { tokenHash: tokenHash(token) },
       include: { membership: true },
     });
-    if (!session || session.expiresAt <= new Date())
+    if (
+      !session ||
+      session.membership.disabledAt ||
+      session.expiresAt <= new Date()
+    )
       throw new UnauthorizedException("Your session has expired");
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       checkOrigin(req);
@@ -105,6 +109,7 @@ export class AuthController {
     }
     const membership = await this.db.membership.findFirst({
       where: {
+        disabledAt: null,
         company: { slug: input.companySlug },
         user: { email: input.email },
       },
@@ -163,6 +168,7 @@ export class AuthController {
       include: { company: true, user: { select: { email: true } } },
     });
     return {
+      membershipId: membership.id,
       email: membership.user.email,
       role: membership.role,
       employeeId: membership.employeeId,

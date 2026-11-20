@@ -288,6 +288,7 @@ export class PeopleRepository {
               await tx.employee.findUnique({
                 where: {
                   companyId_id: { companyId: actor.companyId, id: cursor },
+                  endedOn: null,
                 },
                 select: { managerId: true },
               });

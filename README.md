@@ -184,3 +184,9 @@ After `pnpm db:migrate`, open **Onboarding**. HR can create a branch or departme
 The first-week workspace provides a schedule, buddy and manager contacts, welcome links, policy acknowledgements and blockers. HR can group readiness by joining week or branch, identify the owner of overdue work, record equipment handover or an exemption, and close the plan after final review. Materials are links. Store private identity documents separately.
 
 In the standalone demo, open **Admin → Onboarding**, start the Design first week template for the fictional Chennai designer, and select a buddy under **Edit first-week details**. Switch to the new hire to acknowledge the handbook and flag a missing laptop. Switch to the reporting manager to finish their task, and return to HR to resolve the blocker, record handover and close the plan. The demo keeps progress across role switches and reloads. To update the standalone copy after changing the shared model or board, run `node scripts/sync-onboarding.mjs`. Lint checks that both copies match.
+
+### Employee lifecycle and workforce operations
+
+Sign in and choose **Workforce** to manage departures, shift swaps, leave accrual, hiring, probation, transfers, performance reviews, HR cases, equipment, qualifications and headcount. A vacancy can lead to a candidate, an accepted offer, an employee record and an onboarding plan. Company login accounts are provisioned separately.
+
+For the standalone demo, run `pnpm --dir prototype dev` and open `/admin/workforce`. The workspace selector opens each workflow. Use the demo role and person selectors to acknowledge a handover or consent to a swap. Advance the demo date to apply a scheduled transfer. Each visitor’s changes are stored in their browser.

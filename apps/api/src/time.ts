@@ -1,3 +1,4 @@
+import { employeeLedger, overnight, clockDay } from "./work-time";
 import {
   BadRequestException,
   Body,
@@ -104,8 +105,12 @@ export class TimeController {
               orderBy: { createdAt: "desc" },
             }),
       ]);
+    const accrued = me ? await employeeLedger(this.db, companyId, me.id) : null;
     return {
       today: indiaDay(new Date()),
+      clockDay: me
+        ? await clockDay(this.db, companyId, me.id, new Date(), "out")
+        : undefined,
       branchId: me?.branchId ?? null,
       branches,
       types: types.map((t) => {
@@ -120,7 +125,13 @@ export class TimeController {
           id: t.id,
           name: t.name,
           year: t.year,
-          openingDays: t.openingDays,
+          openingDays: accrued
+            ? accrued(t.id)
+                .filter(
+                  (e) => !["Reserved leave", "Leave taken"].includes(e.label),
+                )
+                .reduce((sum, e) => sum + e.days, 0)
+            : t.openingDays,
           unpaid: t.unpaid,
           used: count("Approved"),
           pending: count("Pending"),
@@ -322,12 +333,11 @@ export class TimeController {
           });
           if (active.some((l) => l.start <= c.end && l.end >= c.start))
             invalid("These dates overlap an existing request");
+          const entries = await employeeLedger(tx, companyId, employeeId);
+          const asOf = c.end > today ? c.end : today;
           if (
-            active
-              .filter((l) => l.typeId === policy.id)
-              .reduce((n, l) => n + l.days.length, 0) +
-              days.length >
-            policy.openingDays
+            entries(policy.id, asOf, days).reduce((sum, e) => sum + e.days, 0) <
+            0
           )
             invalid("Insufficient available leave");
           await tx.leaveRequest.create({
@@ -344,7 +354,11 @@ export class TimeController {
           return;
         }
         if (c.action === "clock") {
-          const key = { companyId, employeeId, day: today };
+          const key = {
+            companyId,
+            employeeId,
+            day: await clockDay(tx, companyId, employeeId, now, c.direction),
+          };
           if (c.direction === "in") {
             await tx.attendance.create({ data: { ...key, checkIn: now } });
             return;
@@ -363,14 +377,19 @@ export class TimeController {
         if (c.action === "correct") {
           const checkIn = new Date(c.checkIn),
             checkOut = new Date(c.checkOut);
+          const fitsShift = (
+            await overnight(tx, companyId, employeeId, c.day)
+          ).some(
+            (s) => checkIn.getTime() >= s.start && checkOut.getTime() <= s.end,
+          );
           if (
-            indiaDay(checkIn) !== c.day ||
-            indiaDay(checkOut) !== c.day ||
+            (!fitsShift &&
+              (indiaDay(checkIn) !== c.day || indiaDay(checkOut) !== c.day)) ||
             checkOut <= checkIn ||
             checkOut > now
           )
             invalid(
-              "Choose past times on the same day in India, with check-out after check-in",
+              "Choose past times on the same day or within an assigned overnight shift",
             );
           if (
             await tx.correction.count({

@@ -1,3 +1,4 @@
+import {handoverAsset} from "../workforce/model";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { OnboardingBoard } from "../onboarding/board";
@@ -11,7 +12,7 @@ import {
 import { useDemo } from "../lib/store";
 import { DEMO_MANAGERS, DEMO_NEW_HIRE, FIRST_WEEK_SCHEDULE, handbookUrl } from "../onboarding/seed";
 export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
-  const { onboarding, saveOnboarding } = useDemo(),
+  const { onboarding, saveOnboarding,saveWork,workforce } = useDemo(),
     [as, setAs] = useState("hr"),
     [error, setError] = useState("");
   const manager = admin && as !== "hr";
@@ -105,7 +106,10 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
           };
         }
       }
-      saveOnboarding(next);
+      if(c.action==="handover"){
+ const row=handoverAsset(workforce.records,c.asset,c.item,c.employeeId,viewer.employeeId??"e1",workforce.today,crypto.randomUUID());
+ saveWork({onboarding:next,workforce:{...workforce,records:[...workforce.records.filter(r=>r.id!==row.id),row]}});
+ }else saveOnboarding(next);
       setError("");
       return true;
     } catch (e) {
