@@ -42,7 +42,7 @@ export default function People() {
   }, [q, page]);
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <div className="hr-page-head mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">People</h1>
           <p className="mt-1 text-muted">
@@ -82,7 +82,7 @@ export default function People() {
         className="overflow-x-auto rounded-xl border border-line bg-white"
         aria-busy={loading}
       >
-        <table className="w-full min-w-[650px]">
+        <table className="hr-directory w-full min-w-[650px]">
           <caption className="sr-only">Employee directory</caption>
           <thead>
             <tr>
@@ -102,9 +102,11 @@ export default function People() {
                     {e.code} · {e.designation.name}
                   </span>
                 </td>
-                <td>{e.department.name}</td>
-                <td>{e.branch.name}</td>
-                <td className="num">{e.dateOfJoining}</td>
+                <td data-field="Department">{e.department.name}</td>
+                <td data-field="Branch">{e.branch.name}</td>
+                <td className="num" data-field="Joined">
+                  {e.dateOfJoining}
+                </td>
                 <td>
                   <Link
                     className="font-semibold text-indigo underline"

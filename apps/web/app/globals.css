@@ -136,52 +136,6 @@ th {
     transition: background-color 140ms ease-out;
   }
 }
-.workspace-header {
-  color: white;
-  background: linear-gradient(115deg, #182452, #293a82 72%, #374b93);
-  box-shadow: 0 5px 22px #15244821;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-.brand:before {
-  content: "";
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: radial-gradient(circle, #ffc351 0 30%, #fff 32%);
-  box-shadow: 0 2px 7px #10153666;
-}
-.workspace-nav {
-  max-width: 72rem;
-  margin: auto;
-  padding: 0 1.25rem;
-  display: flex;
-  gap: 1rem;
-  overflow: auto;
-}
-.workspace-nav a {
-  padding: 9px 8px;
-  border-bottom: 3px solid transparent;
-  color: #e2e7ff;
-}
-.workspace-nav a[aria-current="page"] {
-  color: white;
-  border-color: #ffbd4d;
-  font-weight: 700;
-}
-.workspace-nav a:hover {
-  background: #ffffff14;
-}
-body {
-  background: linear-gradient(155deg, #eff1fb, #faf9f5 75%) fixed;
-}
-.panel,
-.time-sheet {
-  box-shadow: 0 8px 26px -16px #28396b63;
-}
 .time-head {
   display: flex;
   flex-wrap: wrap;
@@ -334,44 +288,6 @@ body {
     font-size: 2.5rem;
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  @keyframes settle {
-    from {
-      transform: translateY(6px);
-      opacity: 0.7;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  .time-sheet,
-  .panel {
-    animation: settle 0.28s ease-out both;
-  }
-  .time-sheet:nth-child(2) {
-    animation-delay: 45ms;
-  }
-  .time-sheet:nth-child(3) {
-    animation-delay: 80ms;
-  }
-  button,
-  .button {
-    transition:
-      transform 0.16s,
-      box-shadow 0.16s,
-      background 0.16s;
-  }
-  button:enabled:hover,
-  .button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px #202b6029;
-  }
-  button:active {
-    transform: translateY(1px);
-  }
-}
-
 .work-action {
   padding: 0.75rem 1rem;
   border: 1px solid var(--color-line);
@@ -384,4 +300,30 @@ body {
 }
 .workforce article {
   overflow-wrap: anywhere;
+}
+
+.auth-entry {
+  display: grid;
+  min-height: 100svh;
+  align-content: center;
+  margin: auto;
+  max-width: 30rem;
+  padding: 2rem 1.25rem;
+}
+.auth-entry .panel {
+  padding: clamp(1.4rem, 4vw, 2.3rem);
+  border-top: 3px solid #354797;
+  box-shadow: 0 12px 48px -32px #20295165;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.auth-brand:before {
+  background-color: #202951;
+  background-image: radial-gradient(circle, #ebb442 0 25%, transparent 28%);
+}
+.auth-entry button {
+  width: 100%;
 }

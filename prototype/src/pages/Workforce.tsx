@@ -29,7 +29,7 @@ export function WorkforceDemo({ admin = false }: { admin?: boolean }) {
   }
   return (
     <div className="space-y-4">
-      <div className="panel flex flex-wrap items-end gap-3">
+      <details className="hr-preview-settings"><summary>Demo controls</summary><div className="hr-preview-fields">
         {admin && (
           <label>
             Demo role
@@ -78,7 +78,7 @@ export function WorkforceDemo({ admin = false }: { admin?: boolean }) {
         >
           {admin ? "Employee demo" : "HR demo"}
         </Link>
-      </div>
+      </div></details>
       {error && <p role="alert">{error}</p>}
       {ended ? (
         <p>Company access ended on {ended}.</p>

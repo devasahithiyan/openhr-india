@@ -56,7 +56,7 @@ export function statusTone(s: string): Tone {
 
 export function PageHeader({ title, sub, action }: { title: string; sub?: ReactNode; action?: ReactNode }) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
+    <header className="hr-page-head mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
       <div>
         <h1 className="text-[28px] leading-tight font-bold tracking-tight text-ink sm:text-[32px]">{title}</h1>
         {sub && <p className="mt-1 text-[15px] text-muted">{sub}</p>}
@@ -91,24 +91,18 @@ export function Button({
 export function DemoBar({ role }: { role: "admin" | "employee" }) {
   const { reset } = useDemo();
   return (
-    <div className="no-print flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-haldi px-4 py-1.5 text-[14px] text-ink">
-      <p>
-        <strong className="font-semibold">Demo with sample data.</strong>{" "}
-        <span className="hidden sm:inline">You're viewing as {role === "admin" ? "the HR admin" : "an employee"}.</span>
-      </p>
-      <div className="flex items-center gap-4">
-        <Link className="font-semibold underline underline-offset-2" to={role === "admin" ? "/me" : "/admin"}>
-          Switch to {role === "admin" ? "employee" : "HR admin"} view
+    <div className="hr-demo-tools">
+      <span className="hr-demo-label">Sample data</span>
+        <Link className="hr-tool" to={role === "admin" ? "/me" : "/admin"}>
+          <span className="hr-switch-long">Switch to </span>{role === "admin" ? "Employee" : "HR admin"} view
         </Link>
-        <button
-          className="underline underline-offset-2"
+        <button className="hr-tool"
           onClick={() => {
             if (confirm("Reset all demo changes?")) reset();
           }}
         >
           Reset demo
         </button>
-      </div>
     </div>
   );
 }

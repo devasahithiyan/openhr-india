@@ -22,10 +22,11 @@ export default function Login() {
     }
   }
   return (
-    <main className="mx-auto max-w-md px-5 py-16 sm:py-24">
-      <div className="mb-10">
-        <p className="text-2xl font-bold text-indigo-deep">OpenHR India</p>
-        <p className="mt-2 text-muted">People, with care.</p>
+    <main className="auth-entry">
+      <div className="mb-5">
+        <p className="auth-brand text-2xl font-bold text-indigo-deep">
+          OpenHR India
+        </p>
       </div>
       <section className="panel">
         <h1 className="mb-2 text-3xl font-bold">Sign in</h1>

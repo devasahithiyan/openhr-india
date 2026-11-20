@@ -119,7 +119,7 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
   }
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-4">
+      <details className="hr-preview-settings"><summary>Demo controls</summary><div className="hr-preview-fields">
         {!admin && newHire && (
           <p>
             <strong>Previewing as new joiner {newHire.name}</strong>, Junior Textile Designer at Coimbatore, joining 23 Nov 2026.
@@ -147,7 +147,7 @@ export function OnboardingDemo({ admin = false }: { admin?: boolean }) {
         >
           {admin ? "Preview as the new joiner" : "Open the HR view"}
         </Link>
-      </div>
+      </div></details>
       {error && <p role="alert">{error}</p>}
       <OnboardingBoard
         viewer={viewer}

@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { WorkspaceShell, type NavItem } from "./workspace-shell";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { AuthUser } from "@openhr/shared";
@@ -69,58 +70,68 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         )}
       </main>
     );
+  const items: NavItem[] = [
+    { href: "/employees", label: "People", icon: "people", group: "People" },
+    { href: "/organization", label: "Org chart", icon: "org", group: "People" },
+    {
+      href: "/onboarding",
+      label: "Onboarding",
+      icon: "onboarding",
+      group: "People",
+    },
+    {
+      href: "/workforce",
+      label: "Workforce",
+      icon: "workforce",
+      group: "People",
+    },
+    { href: "/time/leave", label: "Leave", icon: "leave", group: "Time" },
+    {
+      href: "/time/calendar",
+      label: "Calendar",
+      icon: "calendar",
+      group: "Time",
+    },
+    {
+      href: "/time/attendance",
+      label: "Attendance",
+      icon: "time",
+      group: "Time",
+    },
+    {
+      href: "/payroll",
+      label: ["HR", "Admin"].includes(user.role) ? "Payroll" : "My payslip",
+      icon: "pay",
+      group: "Finance",
+    },
+    { href: "/expenses", label: "Expenses", icon: "expense", group: "Finance" },
+  ];
   return (
     <Context.Provider value={user}>
-      <header className="workspace-header">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-4">
-          <Link href="/employees" className="brand text-xl font-bold">
-            OpenHR India
+      <WorkspaceShell
+        items={items}
+        pathname={pathname}
+        home="/employees"
+        company={user.company.name}
+        identity={user.role}
+        link={(href, content, attrs) => (
+          <Link href={href} {...attrs}>
+            {content}
           </Link>
-          <div className="flex flex-wrap items-center gap-4">
-            <span>{user.company.name}</span>
-            <span className="rounded bg-indigo-soft px-2 py-1 text-sm text-indigo-deep">
-              {user.role}
-            </span>
-            <button className="secondary" onClick={logout}>
-              Sign out
-            </button>
-          </div>
-        </div>
-        <nav aria-label="Workspace" className="workspace-nav">
-          {[
-            ["/employees", "People"],
-            ["/organization", "Org chart"],
-            [
-              "/payroll",
-              user.role === "Admin" || user.role === "HR"
-                ? "Payroll"
-                : "My payslip",
-            ],
-            ["/time/leave", "Leave"],
-            ["/time/calendar", "Calendar"],
-            ["/time/attendance", "Attendance"],
-            ["/expenses", "Expenses"],
-            ["/onboarding", "Onboarding"],
-            ["/workforce", "Workforce"],
-          ].map(([href, title]) => (
-            <Link
-              key={href}
-              href={href!}
-              aria-current={pathname.startsWith(href!) ? "page" : undefined}
-            >
-              {title}
-            </Link>
-          ))}
-        </nav>
-      </header>
-      <main className="mx-auto max-w-6xl px-5 py-8">
+        )}
+        tools={
+          <button className="hr-tool" onClick={logout}>
+            Sign out
+          </button>
+        }
+      >
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
         {children}
-      </main>
+      </WorkspaceShell>
     </Context.Provider>
   );
 }

@@ -4,6 +4,7 @@ import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import "./index.css";
+import "./workspace.css";
 import { AdminShell, EmployeeShell } from "./components/Shells";
 import { DemoProvider } from "./lib/store";
 import { AdminAttendance } from "./pages/AdminAttendance";
