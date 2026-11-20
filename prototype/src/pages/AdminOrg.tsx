@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { Avatar, Button, PageHeader } from "../components/ui";
-import { EMPLOYEES, type Employee } from "../lib/data";
+import {useDirectory} from "../lib/store";
+import { type Employee } from "../lib/data";
 import { EmployeeDrawer } from "./AdminPeople";
 
-const byId = new Map(EMPLOYEES.map((e) => [e.id, e]));
-const DEPARTMENTS = [...new Set(EMPLOYEES.map((e) => e.department))].sort();
-const MANAGER_IDS = [...new Set(EMPLOYEES.map((e) => e.managerId).filter((id): id is string => !!id))];
-const ROOTS = EMPLOYEES.filter((e) => !e.managerId);
-
 export function AdminOrg() {
+ const employees=useDirectory();
+const byId = new Map(employees.map((e) => [e.id, e]));
+const DEPARTMENTS = [...new Set(employees.map((e) => e.department))].sort();
+const MANAGER_IDS = [...new Set(employees.map((e) => e.managerId).filter((id): id is string => !!id))];
+const ROOTS = employees.filter((e) => !e.managerId);
+
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(ROOTS.map((e) => e.id)));
@@ -19,7 +21,7 @@ export function AdminOrg() {
 
   // People matching the filters, plus everyone above them so each match keeps its reporting line.
   const { matches, visible } = useMemo(() => {
-    const matches = EMPLOYEES.filter(
+    const matches = employees.filter(
       (e) =>
         (!department || e.department === department) &&
         (e.name.toLowerCase().includes(term) || e.code.toLowerCase().includes(term)),
@@ -33,10 +35,10 @@ export function AdminOrg() {
       }
     }
     return { matches, visible };
-  }, [term, department]);
+  }, [term, department, employees, byId]);
 
   const matchIds = new Set(matches.map((m) => m.id));
-  const reportsOf = (id: string) => EMPLOYEES.filter((e) => e.managerId === id && visible.has(e.id));
+  const reportsOf = (id: string) => employees.filter((e) => e.managerId === id && visible.has(e.id));
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -48,7 +50,7 @@ export function AdminOrg() {
 
   function branch(person: Employee) {
     const reports = reportsOf(person.id);
-    const totalReports = EMPLOYEES.filter((e) => e.managerId === person.id).length;
+    const totalReports = employees.filter((e) => e.managerId === person.id).length;
     const open = filtering || expanded.has(person.id);
     const dimmed = filtering && !matchIds.has(person.id);
     return (

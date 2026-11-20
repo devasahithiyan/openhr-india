@@ -1,3 +1,4 @@
+import {WorkforceDemo} from "./pages/Workforce";
 import {OnboardingDemo} from "./pages/Onboarding";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
@@ -53,6 +54,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="onboarding" element={<OnboardingDemo admin/>}/>
+            <Route path="workforce" element={<WorkforceDemo admin/>}/>
             <Route path="expenses" element={<Expenses admin />} />
             <Route path="payroll" element={<AdminPayroll />} />
             <Route path="compliance" element={<AdminCompliance />} />
@@ -60,6 +62,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/me" element={<EmployeeShell />}>
             <Route index element={<EmployeeHome />} />
             <Route path="onboarding" element={<OnboardingDemo/>}/>
+            <Route path="workforce" element={<WorkforceDemo/>}/>
             <Route path="expenses" element={<Expenses />} />
             <Route path="payslips" element={<EmployeePayslips />} />
             <Route path="leave" element={<EmployeeLeave />} />

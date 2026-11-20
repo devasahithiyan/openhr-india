@@ -53,3 +53,11 @@ GET /api/onboarding returns company plans for HR/Admin, self and direct reports 
 The first-week workspace adds setup (schedule, buddy, welcome and versioned policy links), acknowledge, block and resolve. Only a new hire can acknowledge their current policy or raise a blocker. HR records the resolution. The contacts list contains only managers and buddies associated with visible plans.
 
 HR uses handover or exempt to record equipment disposition. Close requires a final note, finished tasks, resolved blockers, acknowledgement of the configured policy and an equipment decision. Closed plans are read-only. Office equipment records describe handover to the plan’s employee, with an asset reference, actor and timestamp.
+
+## Workforce operations
+
+`GET /api/workforce` returns the current company's role-filtered records and references. Private HR cases are visible to their author and designated recipient. Employee review views receive manager feedback after release.
+
+`POST /api/workforce` accepts `{ "action", "id", "revision", "values" }` with the session CSRF token. Generate a UUID and send revision zero for a new record. For subsequent actions use the latest revision. The action registry in `packages/shared/src/workforce.ts` defines valid fields and transitions. Refresh after a conflict. Multi-record changes, including shift exchanges, asset receipts, hiring and exit closure, run in one database transaction.
+
+Closing a confirmed exit requires its last day to have arrived and outstanding clearance work to be resolved. It disables linked company memberships and revokes their sessions. Future-dated transfers are applied by the API process on its minute scan. Departure-month payroll remains subject to final settlement review.

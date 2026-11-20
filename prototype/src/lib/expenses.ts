@@ -50,8 +50,11 @@ export const claimTotal = (c: Claim) =>
 export const managerId = EMPLOYEES.find(
   (e) => e.id === DEMO_EMPLOYEE_ID,
 )!.managerId!;
-export function allowedReview(c: Claim, role: Role) {
-  const owner = EMPLOYEES.find((e) => e.id === c.owner)!;
+type ReportingLine={id:string;managerId?:string};
+export function allowedReview(c: Claim, role: Role,people:ReportingLine[]=EMPLOYEES) {
+  const owner = people.find((e) => e.id === c.owner);
+  if(!owner)return false;
+  const managerId=people.find(p=>p.id===DEMO_EMPLOYEE_ID)?.managerId;
   return (
     c.status === "Submitted" &&
     (role === "manager"
@@ -64,7 +67,7 @@ export function updateClaims(
   role: Role,
   a: Action,
   today: string,
-  newId: string,
+  newId: string,people:ReportingLine[]=EMPLOYEES,
 ): Claim[] {
   if (
     "items" in a &&
@@ -115,7 +118,7 @@ export function updateClaims(
         return c;
       status = "Submitted";
     } else {
-      if (!allowedReview(c, role) || (a.kind === "return" && !a.reason.trim()))
+      if (!allowedReview(c, role,people) || (a.kind === "return" && !a.reason.trim()))
         return c;
       status = a.kind === "approve" ? "Approved" : "Returned";
     }

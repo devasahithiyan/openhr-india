@@ -4,6 +4,8 @@ import { URL } from "node:url";
 import { readFile, writeFile } from "node:fs/promises";
 const files = [
   ["packages/shared/src/onboarding-model.ts", "model.ts"],
+  ["packages/shared/src/workforce.ts", "../workforce/model.ts"],
+  ["apps/web/components/workforce-board.tsx", "../workforce/board.tsx"],
   ["apps/web/components/onboarding-board.tsx", "board.tsx"],
 ];
 for (const [source, name] of files) {

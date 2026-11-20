@@ -371,3 +371,17 @@ body {
     transform: translateY(1px);
   }
 }
+
+.work-action {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.5rem;
+  background: white;
+}
+.workforce summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.workforce article {
+  overflow-wrap: anywhere;
+}

@@ -28,6 +28,7 @@ export function AdminShell() {
     { to: "/admin/leave", label: "Leave requests", badge: pending },
     { to: "/admin/calendar", label: "Team calendar" },
     { to: "/admin/attendance", label: "Attendance", badge: pendingCorrections },
+    { to: "/admin/workforce", label: "Workforce" },
     { to: "/admin/onboarding", label: "Onboarding" },
     { to: "/admin/expenses", label: "Expenses" },
     { to: "/admin/payroll", label: "Payroll" },
@@ -98,10 +99,12 @@ export function AdminShell() {
 
 export function EmployeeShell() {
   const me = useMe();
+ const ended=useDemo().workforce.people.find(p=>p.id===me.id)?.ended;
   const nav = [
     { to: "/me", label: "Home", end: true },
     { to: "/me/payslips", label: "Payslips" },
     { to: "/me/leave", label: "Leave" },
+    { to: "/me/workforce", label: "Workforce" },
     { to: "/me/onboarding", label: "Onboarding" },
     { to: "/me/expenses", label: "Expenses" },
     { to: "/me/attendance", label: "Attendance" },
@@ -143,7 +146,7 @@ export function EmployeeShell() {
         </nav>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-8">
-        <Outlet />
+        {ended?<p>Company access ended on {ended}.</p>:<Outlet />}
       </main>
     </div>
   );

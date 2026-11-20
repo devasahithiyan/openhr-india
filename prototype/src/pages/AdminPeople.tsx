@@ -1,27 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, Button, PageHeader, Pill, fmtDate } from "../components/ui";
-import { BRANCHES, EMPLOYEES, type Employee } from "../lib/data";
+import { BRANCHES, type Employee } from "../lib/data";
 import { ESI_GROSS_LIMIT, rupees } from "../lib/payroll";
-import { empById } from "./AdminOverview";
+import {useDirectory} from "../lib/store";
 
 export function AdminPeople() {
+const employees=useDirectory();
   const [q, setQ] = useState("");
   const [branch, setBranch] = useState("All");
   const [selected, setSelected] = useState<Employee | null>(null);
 
   const list = useMemo(
     () =>
-      EMPLOYEES.filter(
+      employees.filter(
         (e) =>
           (branch === "All" || e.branch === branch) &&
           `${e.name} ${e.code} ${e.designation} ${e.department}`.toLowerCase().includes(q.toLowerCase()),
       ),
-    [q, branch],
+    [q, branch, employees],
   );
 
   return (
     <>
-      <PageHeader title="People" sub={`${EMPLOYEES.length} employees at Kaveri Textiles`} />
+      <PageHeader title="People" sub={`${employees.length} employees at Kaveri Textiles`} />
 
       <div className="mb-4 flex flex-wrap gap-3">
         <label className="flex-1">
@@ -100,7 +101,7 @@ export function EmployeeDrawer({ e, onClose }: { e: Employee; onClose: () => voi
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-  const manager = e.managerId ? empById(e.managerId) : null;
+  const manager=useDirectory().find(p=>p.id===e.managerId);
 
   const groups: [string, [string, string][]][] = [
     [

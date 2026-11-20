@@ -5,19 +5,21 @@ import { Button, PageHeader, Pill, Section, fmtDate, fmtDay, fmtShort, statusTon
 import { COMPANY, type LeaveType } from "../lib/data";
 import { annualTax, computePayslip, rupees, type Regime } from "../lib/payroll";
 import { DEMO_TODAY, useDemo, useMe } from "../lib/store";
+import {demoWork} from "../workforce/adapter";
+import {ledger} from "../workforce/model";
 import { chargeableDays } from "../lib/time";
 
 /** Balances for this year's leave policies, as configured by HR. */
 function useMyLeave() {
-  const { leaves, policies } = useDemo();
+  const store=useDemo(), {leaves,policies}=store, data=demoWork(store);
   const me = useMe();
   const mine = leaves.filter((l) => l.employeeId === me.id);
   const balance = policies
-    .filter((p) => p.year === 2026)
+    .filter((p) => p.year === Number(data.today.slice(0,4)))
     .map((p) => {
       const used = mine.filter((l) => l.type === p.name && l.status === "Approved").reduce((s, l) => s + l.days, 0);
       const pending = mine.filter((l) => l.type === p.name && l.status === "Pending").reduce((s, l) => s + l.days, 0);
-      return { type: p.name, total: p.openingDays, used, pending, left: p.openingDays - used - pending };
+      const left=ledger(data,me.id,p.id).reduce((sum,entry)=>sum+entry.days,0); return {type:p.name,total:left+used+pending,used,pending,left};
     });
   return { mine, balance };
 }
@@ -148,7 +150,7 @@ export function EmployeePayslips() {
 }
 
 export function EmployeeLeave() {
-  const { applyLeave, withdrawLeave, calendars } = useDemo();
+  const store=useDemo(), { applyLeave, withdrawLeave, calendars } = store;
   const me = useMe();
   const { mine, balance } = useMyLeave();
   const [type, setType] = useState<LeaveType>("Casual");
@@ -159,7 +161,10 @@ export function EmployeeLeave() {
 
   const cal = calendars[me.branch];
   const days = chargeableDays(from, to, cal).length;
-  const left = balance.find((b) => b.type === type)?.left ?? 0;
+  const data=demoWork(store),policy=data.policies.find(p=>p.name===type&&p.year===Number(from.slice(0,4)));
+  const reserved=chargeableDays(from,to,cal);
+  const asOf=to>data.today?to:data.today;
+  const left=policy?days+ledger({...data,absences:[...data.absences,{employeeId:me.id,policy:policy.id,status:"Pending",days:reserved}]},me.id,policy.id,asOf).reduce((sum,item)=>sum+item.days,0):0;
   const workweek = cal.weekdays.length === 6 ? "Sundays" : cal.weekdays.length === 5 ? "weekends" : "weekly offs";
   const error =
     !from || !to

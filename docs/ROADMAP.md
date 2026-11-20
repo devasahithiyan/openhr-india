@@ -14,11 +14,11 @@ A rough phasing plan. Open an issue to discuss changes.
 
 ## Phase 2 — Attendance & Leave
 - [x] Leave requests, approvals, withdrawals, annual opening balances and decision history
-- [ ] Accrual and carry-forward
+- [x] Employee leave accrual, capped carry-forward and expiry ledger
 - [x] Branch workweeks, holidays and team absence calendar
 - [ ] Shared state holiday templates
 - [x] Daily attendance and manager-reviewed corrections
-- [ ] Shift scheduling
+- [x] Shift scheduling, overnight attendance and approved employee swaps
 
 ## Phase 3 — Payroll & Compliance
 - [x] Effective-dated monthly salary structures and components
@@ -30,7 +30,15 @@ A rough phasing plan. Open an issue to discuss changes.
 
 ## Phase 4 — Beyond
 - [x] Onboarding templates, first-week workspace, equipment and readiness review
-- [ ] Offboarding, F&F settlement, gratuity
+- [ ] Full and final settlement and gratuity
 - [x] Itemized expense claims, review, resubmission and reimbursement tracking
 - [ ] Reports and analytics
 - [ ] Indian language support, mobile app, integrations
+
+
+## Workforce lifecycle
+
+- [x] Exit cases, notice dates, reusable clearance tasks, handover acknowledgement, reporting-line reassignment, asset and expense clearance, confidential feedback, versioned letters and company access closure
+- [x] Headcount, vacancies, recruiting and offer-to-onboarding conversion
+- [x] Probation, effective-dated assignments, performance review and release
+- [x] Private HR cases, equipment inventory, role qualifications and certification renewals

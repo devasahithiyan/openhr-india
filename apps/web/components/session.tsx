@@ -101,6 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             ["/time/attendance", "Attendance"],
             ["/expenses", "Expenses"],
             ["/onboarding", "Onboarding"],
+            ["/workforce", "Workforce"],
           ].map(([href, title]) => (
             <Link
               key={href}

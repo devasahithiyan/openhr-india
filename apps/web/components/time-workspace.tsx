@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode, type FormEvent } from "react";
 import {
+  shiftDate,
   canManageEmployees,
   chargeableDays,
   type TimeAction,
@@ -501,7 +502,7 @@ function Attendance({
   review: boolean;
 }) {
   const entry = data.attendance.find(
-    (a) => a.employeeId === own && a.day === data.today,
+    (a) => a.employeeId === own && a.day === (data.clockDay ?? data.today),
   );
   const [day, setDay] = useState(data.today);
   const absent = data.leaves.filter(
@@ -573,7 +574,11 @@ function Attendance({
                 action: "correct",
                 day,
                 checkIn: day + "T" + value(f, "in") + ":00+05:30",
-                checkOut: day + "T" + value(f, "out") + ":00+05:30",
+                checkOut:
+                  (value(f, "out") < value(f, "in") ? shiftDate(day, 1) : day) +
+                  "T" +
+                  value(f, "out") +
+                  ":00+05:30",
                 reason: value(f, "reason"),
               });
             }}

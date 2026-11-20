@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader, Pill } from "../components/ui";
-import { DEMO_EMPLOYEE_ID, EMPLOYEES } from "../lib/data";
+import { DEMO_EMPLOYEE_ID } from "../lib/data";
 import {
   allowedReview,
   categories,
   claimTotal,
-  managerId,
+
   type Claim,
   type Item,
   type Role,
 } from "../lib/expenses";
-import { DEMO_TODAY, useDemo } from "../lib/store";
+import { DEMO_TODAY, useDemo,useDirectory } from "../lib/store";
 const money = (v: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
     v / 100,
@@ -137,6 +137,7 @@ function Edit({ claim }: { claim?: Claim }) {
   );
 }
 export function Expenses({ admin = false }: { admin?: boolean }) {
+  const people=useDirectory(),managerId=people.find(p=>p.id===DEMO_EMPLOYEE_ID)?.managerId;
   const { claims, expense } = useDemo(),
     [reviewer, setReviewer] = useState<Role>("manager");
   const role = admin ? reviewer : "employee";
@@ -145,7 +146,7 @@ export function Expenses({ admin = false }: { admin?: boolean }) {
       role === "hr" ||
       (role === "employee"
         ? c.owner === DEMO_EMPLOYEE_ID
-        : EMPLOYEES.find((e) => e.id === c.owner)?.managerId === managerId ||
+        : people.find((e) => e.id === c.owner)?.managerId === managerId ||
           c.owner === managerId),
   );
   return (
@@ -171,7 +172,7 @@ export function Expenses({ admin = false }: { admin?: boolean }) {
             value={reviewer}
             onChange={(e) => setReviewer(e.target.value as Role)}
           >
-            <option value="manager">Reporting manager · Arjun</option>
+            <option value="manager">Reporting manager · {people.find(p=>p.id===managerId)?.name??"Unassigned"}</option>
             <option value="hr">HR · Meenakshi</option>
           </select>
         </label>
@@ -203,7 +204,7 @@ export function Expenses({ admin = false }: { admin?: boolean }) {
         >
           <header className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold">
-              {EMPLOYEES.find((e) => e.id === c.owner)?.name} ·{" "}
+              {people.find((e) => e.id === c.owner)?.name} ·{" "}
               {money(claimTotal(c))}
             </h2>
             <Pill
@@ -245,7 +246,7 @@ export function Expenses({ admin = false }: { admin?: boolean }) {
             </ol>
           </details>
           {role === "employee" && c.status === "Returned" && <Edit claim={c} />}
-          {allowedReview(c, role) && (
+          {allowedReview(c, role, people) && (
             <>
               <button
                 className={primary}
