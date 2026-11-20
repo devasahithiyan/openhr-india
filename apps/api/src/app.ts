@@ -14,6 +14,7 @@ import { ZodError } from "@openhr/shared";
 import { type Response } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { WorkforceController, WorkforceRepository } from "./workforce";
 import { Database } from "./db";
 import { PayrollController, PayrollRepository } from "./payroll";
 import { OnboardingController, OnboardingRepository } from "./onboarding";
@@ -73,6 +74,7 @@ class SafeErrors implements ExceptionFilter {
 }
 @Module({
   controllers: [
+    WorkforceController,
     OnboardingController,
     ExpenseController,
     HealthController,
@@ -82,6 +84,7 @@ class SafeErrors implements ExceptionFilter {
     PayrollController,
   ],
   providers: [
+    WorkforceRepository,
     OnboardingRepository,
     ExpenseRepository,
     Database,

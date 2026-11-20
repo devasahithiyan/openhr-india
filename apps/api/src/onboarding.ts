@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { handoverAsset, type WorkRow } from "@openhr/shared";
+import { persist } from "./workforce";
 import {
   Body,
   ConflictException,
@@ -242,6 +245,27 @@ export class OnboardingRepository {
             );
           } catch (e) {
             throw new ConflictException((e as Error).message);
+          }
+          if (c.action === "handover") {
+            const inventory = await tx.workRecord.findMany({
+              where: { companyId, kind: "asset" },
+              select: { payload: true },
+            });
+            let row: WorkRow;
+            try {
+              row = handoverAsset(
+                inventory.map((x) => x.payload as unknown as WorkRow),
+                c.asset,
+                c.item,
+                p.id,
+                a.membershipId,
+                new Date().toISOString(),
+                randomUUID(),
+              );
+            } catch (e) {
+              throw new ConflictException((e as Error).message);
+            }
+            await persist(tx, companyId, row);
           }
           const updated = await tx.onboardingPlan.updateMany({
             where: { ...key, revision: c.revision },

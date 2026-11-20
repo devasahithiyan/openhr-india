@@ -190,6 +190,7 @@ afterAll(async () => {
       where: { companyId: { in: [companyId, otherCompanyId] } },
     });
     await db.payslip.deleteMany({ where: { companyId } });
+    await db.workRecord.deleteMany({ where: { companyId } });
     await db.payrollRun.deleteMany({ where: { companyId } });
     await db.payrollReview.deleteMany({ where: { companyId } });
     await db.salary.deleteMany({ where: { companyId } });
@@ -584,6 +585,25 @@ describe("real database Auth + People API", () => {
       where: { id: managerId },
       data: { dateOfJoining: new Date("2025-03-16") },
     });
+    await db.employee.update({
+      where: { id: outsiderId },
+      data: { endedOn: "2025-03-15" },
+    });
+    const departure = (await read()).rows.find(
+      (r) => r.employeeId === outsiderId,
+    );
+    expect(departure?.issues.some((i) => i.includes("final settlement"))).toBe(
+      true,
+    );
+    expect(
+      (await read(cookie, "2025-04")).rows.some(
+        (r) => r.employeeId === outsiderId,
+      ),
+    ).toBe(false);
+    await db.employee.update({
+      where: { id: outsiderId },
+      data: { endedOn: null },
+    });
     const initial = await read();
     expect(initial.rows).toHaveLength(3);
     expect(
@@ -975,6 +995,150 @@ describe("real database Auth + People API", () => {
           .send({ name: "HR-created" })
       ).status,
     ).toBe(201);
+  });
+  it("converts an accepted offer into a real joiner, applies an assignment and handles overnight corrections", async () => {
+    const position = randomUUID(),
+      candidate = randomUUID();
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    const template = await db.onboardingTemplate.create({
+      data: {
+        companyId,
+        name: "Fictional hire intake",
+        definitions: [{ title: "Welcome", owner: "HR", offset: 0 }],
+      },
+    });
+    const post = async (
+      id: string,
+      action: string,
+      revision: number,
+      values: Record<string, string>,
+    ) => {
+      const r = await write("/api/workforce", { id, action, revision, values });
+      expect(r.status, r.text).toBe(201);
+    };
+    const assignment = {
+      branch: ownBranch,
+      department: departmentId,
+      designation: designationId,
+    };
+    await post(position, "position", 0, { ...assignment, seats: "8" });
+    await post(position, "vacancy", 1, { note: "Test vacancy" });
+    await post(candidate, "candidate", 0, {
+      position,
+      name: "Demo New Joiner",
+      email: "fictional@example.test",
+    });
+    await post(candidate, "interview", 1, { day: today, note: "Completed" });
+    await post(candidate, "offer", 2, { day: today, note: "Issued" });
+    await post(candidate, "hire", 3, {
+      joined: today,
+      manager: managerId,
+      code: "DEMO-HIRED",
+      template: template.id,
+    });
+    const person = await db.employee.findFirstOrThrow({
+      where: { companyId, code: "DEMO-HIRED" },
+    });
+    expect(
+      await db.onboardingPlan.count({
+        where: { companyId, employeeId: person.id, templateId: template.id },
+      }),
+    ).toBe(1);
+    await post(randomUUID(), "transfer", 0, {
+      ...assignment,
+      day: today,
+      person: person.id,
+      manager: employeeId,
+    });
+    expect(
+      (await db.employee.findUniqueOrThrow({ where: { id: person.id } }))
+        .managerId,
+    ).toBe(employeeId);
+    await post(randomUUID(), "roster", 0, {
+      person: employeeId,
+      day: "2025-06-13",
+      start: "22:00",
+      end: "06:00",
+    });
+    const signed = await login(undefined, `employee-${suffix}@example.test`);
+    const correct = (checkOut: string) =>
+      request(app.getHttpServer())
+        .post("/api/time")
+        .set("Origin", origin)
+        .set("Cookie", cookies(signed))
+        .set("x-csrf-token", signed.body.csrfToken)
+        .send({
+          action: "correct",
+          day: "2025-06-13",
+          checkIn: "2025-06-13T16:30:00Z",
+          checkOut,
+          reason: "Example overnight",
+        });
+    expect((await correct("2025-06-14T03:00:00Z")).status).toBe(400);
+    expect((await correct("2025-06-14T00:30:00Z")).status).toBe(201);
+  });
+  it("isolates workforce records and revokes only the departing company membership", async () => {
+    const id = randomUUID(),
+      day = "2026-11-01";
+    const foreign = await login(`other-${suffix}`);
+    const departing = await login(undefined, `employee-${suffix}@example.test`);
+    const user = await db.membership.findUniqueOrThrow({
+      where: { id: employeeMemberId },
+    });
+    // Use an independent employee with no existing clearance obligations.
+    await db.membership.update({
+      where: { id: user.id },
+      data: { employeeId: outsiderId },
+    });
+    await db.membership.create({
+      data: {
+        companyId: otherCompanyId,
+        role: "Employee",
+        userId: user.userId,
+      },
+    });
+    const otherSession = await login(
+      `other-${suffix}`,
+      `employee-${suffix}@example.test`,
+    );
+    const command = (
+      action: string,
+      revision: number,
+      values: Record<string, string>,
+    ) => write("/api/workforce", { id, action, revision, values });
+    expect(
+      (
+        await command("resign", 0, {
+          person: outsiderId,
+          proposed: day,
+          notice: "1",
+          note: "Fictional departure",
+        })
+      ).status,
+    ).toBe(201);
+    expect(
+      (await command("confirmExit", 1, { last: day, note: "Confirmed" }))
+        .status,
+    ).toBe(201);
+    expect(
+      (await command("confirmExit", 1, { last: day, note: "Stale" })).status,
+    ).toBe(409);
+    const read = (c: string) =>
+      request(app.getHttpServer()).get("/api/workforce").set("Cookie", c);
+    expect((await read(cookies(foreign))).body.records).toEqual([]);
+    expect(
+      (await command("closeExit", 2, { note: "Clearance complete" })).status,
+    ).toBe(201);
+    expect((await read(cookies(departing))).status).toBe(401);
+    expect(
+      (await login(undefined, `employee-${suffix}@example.test`)).status,
+    ).toBe(401);
+    expect((await read(cookies(otherSession))).status).toBe(200);
   });
   it("expires sessions and revokes logout tokens", async () => {
     const signed = await login();

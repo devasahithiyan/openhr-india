@@ -171,6 +171,7 @@ export interface EmployeeRecord {
   };
 }
 export interface AuthUser {
+  membershipId: string;
   email: string;
   role: Role;
   employeeId: string | null;
@@ -200,3 +201,12 @@ export * from "./expenses";
 
 export * from "./onboarding-model";
 export * from "./onboarding";
+export * from "./workforce";
+export const workCommandSchema = z.object({
+  action: z.string().min(1).max(40),
+  id: z.string().uuid(),
+  revision: z.number().int().nonnegative(),
+  values: z
+    .record(z.string().max(1200))
+    .refine((v) => Object.keys(v).length <= 15),
+});
